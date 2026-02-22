@@ -2,6 +2,8 @@ services:
   db:
     ports:
       - '5433:5432'
+    volumes:
+      - db-dev:/var/lib/postgresql/data
 
   backend:
     build:
@@ -42,3 +44,6 @@ services:
         condition: service_healthy
       frontend:
         condition: service_started
+
+volumes:
+  db-dev:
