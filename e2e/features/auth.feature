@@ -21,9 +21,9 @@ Feature: Authentication
     When I fill in name "Login User", email "<unique2>@example.com", password "password123"
     And I submit the form
     Then I am on the task lists page
-    When I log out via API
-    And I am on the login page
-    And I fill in email "<unique2>@example.com" and password "password123"
+    When I click the logout button
+    Then I am redirected to "/login"
+    When I fill in email "<unique2>@example.com" and password "password123"
     And I submit the form
     Then I am on the task lists page
 

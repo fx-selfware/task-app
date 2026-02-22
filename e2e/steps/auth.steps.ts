@@ -55,10 +55,8 @@ Then('I am on the task lists page', async ({ page }) => {
   await expect(page).toHaveURL(/\/task-lists/);
 });
 
-When('I log out via API', async ({ page }) => {
-  await page.evaluate(() =>
-    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }),
-  );
+When('I click the logout button', async ({ page }) => {
+  await page.click('button[title="Log out"]');
 });
 
 Given('I am on the login page', async ({ page }) => {

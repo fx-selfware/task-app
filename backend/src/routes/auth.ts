@@ -52,7 +52,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post('/auth/logout', { preHandler: requireAuth }, async (_request, reply) => {
+  app.post('/auth/logout', async (_request, reply) => {
     reply.clearCookie('token', { path: '/' });
     return reply.send({ ok: true });
   });

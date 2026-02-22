@@ -20,7 +20,7 @@ export function Layout({ children }: LayoutProps) {
   ];
 
   const handleLogout = async () => {
-    await logout.mutateAsync();
+    await logout.mutateAsync().catch(() => {});
     navigate('/login');
   };
 
