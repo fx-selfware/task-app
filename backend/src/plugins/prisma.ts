@@ -9,6 +9,7 @@ declare module 'fastify' {
 
 export const prismaPlugin = fp(async (app) => {
   const prisma = new PrismaClient();
+
   await prisma.$connect();
 
   app.decorate('prisma', prisma);

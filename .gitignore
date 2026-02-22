@@ -29,3 +29,9 @@ backend/src/prisma/migrations/*.sql
 
 # Docker
 *.pid
+
+# Test artifacts
+backend/cucumber-report.html
+e2e/playwright-report/
+e2e/test-results/
+e2e/.features-gen/

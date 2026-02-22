@@ -1,8 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
+import { defineBddConfig } from 'playwright-bdd';
+
+const testDir = defineBddConfig({
+  features: 'features/**/*.feature',
+  steps: 'steps/**/*.ts',
+});
 
 export default defineConfig({
-  testDir: '.',
-  testMatch: '**/*.spec.ts',
+  testDir,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -11,6 +16,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.BASE_URL ?? 'http://localhost',
     trace: 'on-first-retry',
+    video: 'on',
   },
   projects: [
     {
