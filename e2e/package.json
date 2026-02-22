@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "test": "bddgen && playwright test",
+    "test:ac": "bddgen && playwright test --grep \"@ac\"",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report playwright-report"
   },

@@ -88,11 +88,29 @@ The data model: `User` owns `TaskList`s; `TaskList` has `Task`s (ordered by `ord
 
 ### Testing
 
-`docs/acceptance-criteria.md` defines user-facing ACs only. Every AC must be covered by a BDD scenario; BDD suites may cover additional cases beyond the ACs (e.g. API error codes, security checks).
+Two BDD layers together achieve near-complete coverage. The layers are independent — backend tests hit the API directly; E2E tests drive a real browser.
 
 **Backend BDD** — `@cucumber/cucumber` with `tsx/cjs` loader. Scenarios live in `backend/features/*.feature`; step definitions in `backend/features/steps/`. A single shared Fastify app instance is created in `BeforeAll` and reused across scenarios; each scenario clears the DB in `Before`.
 
 **E2E BDD** — `playwright-bdd`. Feature files in `e2e/features/`; step definitions in `e2e/steps/`. Config uses `defineBddConfig()` from `playwright-bdd` to generate the test directory.
+
+#### Acceptance criteria
+
+The ACs live as `@ac`-tagged Gherkin scenarios in `e2e/features/`. There is no separate AC document — the scenario name *is* the AC statement.
+
+```bash
+# List all ACs
+grep -A1 "@ac" e2e/features/**/*.feature
+
+# Run only AC tests
+BASE_URL=http://localhost:8099 npm --prefix e2e run test:ac
+```
+
+**Maintaining ACs:**
+- **Add** — write a new scenario with `@ac` and a name that is the AC statement
+- **Remove** — delete the `@ac` tag; the scenario stays as non-AC coverage, or delete it entirely
+- **Change** — update the scenario name (the contract) and steps (the proof) together
+- Scenarios without `@ac` are extra coverage (edge cases, error paths) not stated as user-facing ACs
 
 ### Docker Compose files
 

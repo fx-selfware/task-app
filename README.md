@@ -97,11 +97,29 @@ nginx listens on port 80 only — no certificates or certbot needed.
 
 ## Running tests manually
 
+### Acceptance criteria tests
+
+The acceptance criteria live as `@ac`-tagged Gherkin scenarios in `e2e/features/`. To see them:
+
 ```bash
-# Backend BDD tests
+grep -A1 "@ac" e2e/features/**/*.feature
+```
+
+To run them against the full stack:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
+npm --prefix e2e install && BASE_URL=http://localhost:8099 npm --prefix e2e run test:ac
+docker compose -f docker-compose.yml -f docker-compose.test.yml down
+```
+
+### Full test suite
+
+```bash
+# Backend BDD tests (API layer)
 docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend-test
 
-# E2E tests (clean DB, port 8099)
+# All E2E tests (clean DB, port 8099)
 docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
 npm --prefix e2e install && BASE_URL=http://localhost:8099 npm --prefix e2e test
 docker compose -f docker-compose.yml -f docker-compose.test.yml down

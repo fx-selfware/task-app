@@ -49,6 +49,19 @@ When('I edit the task {string} to be named {string}', async ({ page }, oldName: 
   await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
 });
 
+When('I edit the task {string} to have title {string} and description {string}', async ({ page }, oldName: string, newTitle: string, description: string) => {
+  await page.locator('p').filter({ hasText: oldName }).first().click();
+  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
+  const titleInput = page.getByLabel('Title');
+  await titleInput.clear();
+  await titleInput.fill(newTitle);
+  const descTextarea = page.getByRole('dialog').locator('textarea');
+  await descTextarea.clear();
+  await descTextarea.fill(description);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
+});
+
 Then('{string} is visible in the task list', async ({ page }, name: string) => {
   await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });
 });
