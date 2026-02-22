@@ -9,5 +9,7 @@ Feature: Task Lists
 
   Scenario: Share a task list by email
     Given I have a task list named "Work"
+    And a collaborator exists with email "collab@example.com"
     When I open the share modal for "Work"
-    Then the share modal is visible with an email input
+    And I invite "collab@example.com" with "Read" permission
+    Then "collab@example.com" is listed in the share modal with "Read" access

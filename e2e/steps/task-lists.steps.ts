@@ -27,7 +27,20 @@ When('I open the share modal for {string}', async ({ page }, name: string) => {
   await page.getByRole('button', { name: 'Share' }).click();
 });
 
-Then('the share modal is visible with an email input', async ({ page }) => {
-  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
-  await expect(page.getByPlaceholder('Email address')).toBeVisible();
+Given('a collaborator exists with email {string}', async ({ request }, email: string) => {
+  await request.post('/api/auth/register', {
+    data: { email, password: 'password123', name: 'Collaborator' },
+  });
+});
+
+When('I invite {string} with {string} permission', async ({ page }, email: string, permission: string) => {
+  await page.getByPlaceholder('Email address').fill(email);
+  await page.getByRole('dialog').locator('form select').selectOption(permission.toUpperCase());
+  await page.getByRole('button', { name: 'Invite' }).click();
+});
+
+Then('{string} is listed in the share modal with {string} access', async ({ page }, email: string, permission: string) => {
+  const shareItem = page.locator('li').filter({ hasText: email });
+  await expect(shareItem).toBeVisible({ timeout: 5000 });
+  await expect(shareItem.locator('select')).toHaveValue(permission.toUpperCase());
 });
