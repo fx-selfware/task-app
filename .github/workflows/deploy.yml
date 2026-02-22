@@ -12,34 +12,22 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run backend tests
-        run: docker compose -f docker-compose.test.yml run --rm backend-test
+        run: docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend-test
 
       - name: Start stack for E2E
-        run: |
-          cp .env.example .env
-          sed -i 's/changeme/testpassword/g' .env
-          sed -i 's/change-this-to-a-long-random-secret/e2e-jwt-secret-at-least-16-chars/g' .env
-          sed -i 's/COOKIE_SECURE=true/COOKIE_SECURE=false/g' .env
-          docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-          sleep 15
-
-      - name: Install e2e deps
-        run: npm ci
-        working-directory: e2e
+        run: docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
 
       - name: Install Playwright
-        run: npx playwright install --with-deps chromium
-        working-directory: e2e
+        run: npm --prefix e2e install && npx --prefix e2e playwright install --with-deps chromium
 
       - name: Run E2E tests
-        run: npx playwright test
-        working-directory: e2e
+        run: npm --prefix e2e test
         env:
-          BASE_URL: http://localhost
+          BASE_URL: http://localhost:8099
 
       - name: Stop stack
         if: always()
-        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml down -v
+        run: docker compose -f docker-compose.yml -f docker-compose.test.yml down -v
 
   deploy:
     needs: test

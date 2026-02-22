@@ -98,11 +98,11 @@ nginx listens on port 80 only — no certificates or certbot needed.
 ## Running tests manually
 
 ```bash
-# Backend API tests (no host dependencies)
-docker compose -f docker-compose.test.yml run --rm backend-test
+# Backend BDD tests
+docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend-test
 
-# E2E tests (requires stack running)
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T backend npx prisma migrate deploy
-cd e2e && npm ci && npx playwright test
+# E2E tests (clean DB, port 8099)
+docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
+npm --prefix e2e install && BASE_URL=http://localhost:8099 npm --prefix e2e test
+docker compose -f docker-compose.yml -f docker-compose.test.yml down
 ```
