@@ -89,7 +89,5 @@ Then('I remain on the login page', async ({ page }) => {
 });
 
 Then('I see an error message', async ({ page }) => {
-  await expect(page.locator('text=/invalid|error|credentials/i')).toBeVisible({
-    timeout: 3000,
-  });
+  await expect(page.locator('.text-red-700')).toBeVisible({ timeout: 3000 });
 });

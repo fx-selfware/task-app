@@ -1,4 +1,4 @@
-export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
+export type TaskStatus = 'TODO' | 'DONE';
 export type Permission = 'READ' | 'WRITE';
 
 export interface User {

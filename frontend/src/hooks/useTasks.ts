@@ -43,6 +43,16 @@ export function useDeleteTask(listId: string) {
   });
 }
 
+export function useDeleteCompletedTasks(listId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => tasksApi.deleteCompleted(listId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
+    },
+  });
+}
+
 export function useReorderTasks(listId: string) {
   const queryClient = useQueryClient();
   return useMutation({

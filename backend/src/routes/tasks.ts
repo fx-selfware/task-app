@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { requireAuth } from '../middleware/requireAuth';
 import { getTaskListWithAccess } from '../services/taskLists';
-import { createTask, updateTask, deleteTask, reorderTasks } from '../services/tasks';
+import { createTask, updateTask, deleteTask, reorderTasks, deleteCompletedTasks } from '../services/tasks';
 
 async function getWriteAccess(
   app: FastifyInstance,
@@ -56,7 +56,7 @@ export async function taskRoutes(app: FastifyInstance) {
       const body = request.body as {
         title?: string;
         description?: string;
-        status?: 'TODO' | 'IN_PROGRESS' | 'DONE';
+        status?: 'TODO' | 'DONE';
       };
 
       if (!(await getWriteAccess(app, id, request.user.userId, reply))) return;
@@ -81,6 +81,24 @@ export async function taskRoutes(app: FastifyInstance) {
 
       try {
         await deleteTask(app.prisma, id, tid);
+        return reply.status(204).send();
+      } catch (err: unknown) {
+        const e = err as Error & { statusCode?: number };
+        return reply.status(e.statusCode ?? 500).send({ error: e.message });
+      }
+    },
+  );
+
+  app.delete(
+    '/task-lists/:id/tasks/completed',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      if (!(await getWriteAccess(app, id, request.user.userId, reply))) return;
+
+      try {
+        await deleteCompletedTasks(app.prisma, id);
         return reply.status(204).send();
       } catch (err: unknown) {
         const e = err as Error & { statusCode?: number };

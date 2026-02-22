@@ -18,4 +18,7 @@ export const tasksApi = {
 
   reorder: (listId: string, orderedIds: string[]) =>
     api.put<{ ok: boolean }>(`/task-lists/${listId}/tasks/reorder`, { orderedIds }),
+
+  deleteCompleted: (listId: string) =>
+    api.delete<void>(`/task-lists/${listId}/tasks/completed`),
 };

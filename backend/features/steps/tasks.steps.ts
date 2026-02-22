@@ -37,6 +37,7 @@ Given('I have a task {string} in that list', async function (this: AppWorld, tit
     headers: { cookie: this.myCookie },
   });
   this.taskId = res.json().task.id;
+  this.tasksByTitle[title] = this.taskId!;
 });
 
 Given(
@@ -131,3 +132,31 @@ When(
     });
   },
 );
+
+When(
+  'I PATCH that task with body {string} for {string}',
+  async function (this: AppWorld, bodyJson: string, title: string) {
+    const taskId = this.tasksByTitle[title];
+    await this.request('PATCH', `/api/task-lists/${this.listId}/tasks/${taskId}`, {
+      payload: JSON.parse(bodyJson),
+      cookie: this.myCookie,
+    });
+  },
+);
+
+When('I DELETE completed tasks from that list', async function (this: AppWorld) {
+  await this.request('DELETE', `/api/task-lists/${this.listId}/tasks/completed`, {
+    cookie: this.myCookie,
+  });
+});
+
+Then('the list contains only {string}', async function (this: AppWorld, title: string) {
+  const listRes = await this.app.inject({
+    method: 'GET',
+    url: `/api/task-lists/${this.listId}`,
+    headers: { cookie: this.myCookie },
+  });
+  const tasks = listRes.json().list.tasks;
+  expect(tasks).to.have.length(1);
+  expect(tasks[0].title).to.equal(title);
+});

@@ -37,6 +37,7 @@ export class AppWorld extends World {
   templateId: string | null = null;
   templateTaskId: string | null = null;
   taskIds: string[] = [];
+  tasksByTitle: Record<string, string> = {};
   myUserId: string | null = null;
 
   constructor(options: IWorldOptions) {
@@ -87,6 +88,7 @@ Before(async function (this: AppWorld) {
   this.templateId = null;
   this.templateTaskId = null;
   this.taskIds = [];
+  this.tasksByTitle = {};
   this.myUserId = null;
   this.cookies = {};
 });

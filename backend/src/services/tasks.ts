@@ -66,6 +66,10 @@ export async function deleteTask(prisma: PrismaClient, taskListId: string, taskI
   await prisma.task.delete({ where: { id: taskId } });
 }
 
+export async function deleteCompletedTasks(prisma: PrismaClient, taskListId: string) {
+  await prisma.task.deleteMany({ where: { taskListId, status: 'DONE' } });
+}
+
 export async function reorderTasks(
   prisma: PrismaClient,
   taskListId: string,

@@ -87,3 +87,42 @@ Then('{string} is listed in the share modal with {string} access', async ({ page
   await expect(shareItem).toBeVisible({ timeout: 5000 });
   await expect(shareItem.locator('select')).toHaveValue(permission.toUpperCase());
 });
+
+When('I check the checkbox for {string}', async ({ page }, name: string) => {
+  await page.getByRole('checkbox', { name: `Mark "${name}" as done` }).click();
+});
+
+Then('the completed section shows {int} completed task(s)', async ({ page }, count: number) => {
+  await expect(page.getByRole('button', { name: new RegExp(`Completed \\(${count}\\)`) })).toBeVisible({ timeout: 5000 });
+});
+
+When('I expand the completed section', async ({ page }) => {
+  const button = page.getByRole('button', { name: /Completed \(/ });
+  await expect(button).toBeVisible({ timeout: 5000 });
+  const text = await button.textContent();
+  if (text?.includes('▶')) {
+    await button.click();
+  }
+});
+
+When('I uncheck the checkbox for {string}', async ({ page }, name: string) => {
+  await page.getByRole('checkbox', { name: `Mark "${name}" as todo` }).click();
+});
+
+Then('the completed section is not visible', async ({ page }) => {
+  await expect(page.getByRole('button', { name: /Completed \(/ })).not.toBeVisible({ timeout: 3000 });
+});
+
+When('I click {string}', async ({ page }, label: string) => {
+  await page.getByRole('button', { name: label }).click();
+});
+
+Then('the completed section header is visible but tasks are hidden', async ({ page }) => {
+  await expect(page.getByRole('button', { name: /Completed \(/ })).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('button', { name: 'Delete completed' })).not.toBeVisible();
+});
+
+Then('{string} appears with strikethrough styling', async ({ page }, name: string) => {
+  const taskTitle = page.locator('p').filter({ hasText: name }).first();
+  await expect(taskTitle).toHaveClass(/line-through/, { timeout: 5000 });
+});
