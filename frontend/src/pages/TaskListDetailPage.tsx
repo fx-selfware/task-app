@@ -4,7 +4,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -65,7 +66,10 @@ export function TaskListDetailPage() {
   }, [doneCount]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -433,7 +437,7 @@ function SortableTaskCard({
       {canWrite && (
         <button
           onClick={onDelete}
-          className="mt-0.5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
+          className="mt-0.5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
           aria-label="Delete task"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -450,6 +454,7 @@ function SortableTaskCard({
         <button
           {...attributes}
           {...listeners}
+          style={{ touchAction: 'none' }}
           className="mt-0.5 cursor-grab text-gray-300 hover:text-gray-500 active:cursor-grabbing"
           aria-label="Drag to reorder"
         >
@@ -497,7 +502,7 @@ function CompletedTaskCard({
       {canWrite && (
         <button
           onClick={onDelete}
-          className="mt-0.5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
+          className="mt-0.5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
           aria-label="Delete task"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
