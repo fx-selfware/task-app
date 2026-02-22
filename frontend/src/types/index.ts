@@ -14,7 +14,6 @@ export interface Task {
   description?: string | null;
   status: TaskStatus;
   order: number;
-  dueDate?: string | null;
   taskListId: string;
   createdAt: string;
   updatedAt: string;

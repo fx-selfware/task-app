@@ -5,7 +5,7 @@ import type { TaskStatus } from '../types';
 export function useCreateTask(listId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { title: string; description?: string; dueDate?: string }) =>
+    mutationFn: (data: { title: string; description?: string }) =>
       tasksApi.create(listId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
@@ -25,7 +25,6 @@ export function useUpdateTask(listId: string) {
         title?: string;
         description?: string | null;
         status?: TaskStatus;
-        dueDate?: string | null;
       };
     }) => tasksApi.update(listId, taskId, data),
     onSuccess: () => {

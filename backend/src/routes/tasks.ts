@@ -32,7 +32,6 @@ export async function taskRoutes(app: FastifyInstance) {
       const body = request.body as {
         title: string;
         description?: string;
-        dueDate?: string;
       };
 
       if (!body.title) return reply.status(400).send({ error: 'title is required' });
@@ -58,7 +57,6 @@ export async function taskRoutes(app: FastifyInstance) {
         title?: string;
         description?: string;
         status?: 'TODO' | 'IN_PROGRESS' | 'DONE';
-        dueDate?: string | null;
       };
 
       if (!(await getWriteAccess(app, id, request.user.userId, reply))) return;

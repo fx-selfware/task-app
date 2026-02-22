@@ -11,18 +11,8 @@ Do not create git commits unless explicitly asked to do so.
 ### Backend
 
 ```bash
-# Run BDD tests (host — requires local postgres)
-DATABASE_URL=postgresql://taskapp:changeme@localhost:5432/taskapp_test \
-JWT_SECRET=test-jwt-secret-at-least-16-chars \
-NODE_ENV=test COOKIE_SECURE=false \
-npx cucumber-js
-# from: backend/
-
-# Run a single feature file
-npx cucumber-js features/auth.feature
-
-# Run BDD tests (Docker — no host dependencies)
-docker compose -f docker-compose.test.yml run --rm backend-test
+# Run BDD tests (requires both compose files; run from repo root)
+docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend-test
 
 # Dev server
 npx tsx watch src/index.ts   # from: backend/
@@ -53,6 +43,8 @@ npm --prefix e2e install && npm --prefix e2e run test:ui
 
 ```bash
 docker compose up --build -d      # dev (port 8090, hot reload)
+# --build is required after any Prisma schema change: node_modules (including
+# the generated Prisma client) is baked into the image, not bind-mounted.
 docker compose down
 
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d   # prod (port 80)

@@ -3,14 +3,12 @@ import { PrismaClient, TaskStatus } from '@prisma/client';
 export interface CreateTaskInput {
   title: string;
   description?: string;
-  dueDate?: string;
 }
 
 export interface UpdateTaskInput {
   title?: string;
   description?: string;
   status?: TaskStatus;
-  dueDate?: string | null;
 }
 
 export async function createTask(
@@ -28,7 +26,6 @@ export async function createTask(
     data: {
       title: input.title,
       description: input.description,
-      dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
       order,
       taskListId,
     },
@@ -54,9 +51,6 @@ export async function updateTask(
       ...(input.title !== undefined && { title: input.title }),
       ...(input.description !== undefined && { description: input.description }),
       ...(input.status !== undefined && { status: input.status }),
-      ...(input.dueDate !== undefined && {
-        dueDate: input.dueDate ? new Date(input.dueDate) : null,
-      }),
     },
   });
 }

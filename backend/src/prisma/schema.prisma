@@ -36,7 +36,6 @@ model Task {
   description String?
   status      TaskStatus @default(TODO)
   order       Int
-  dueDate     DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   taskListId  String

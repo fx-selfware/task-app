@@ -54,7 +54,6 @@ export function TaskListDetailPage() {
   const [editTarget, setEditTarget] = useState<Task | null>(null);
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [editTaskDesc, setEditTaskDesc] = useState('');
-  const [editTaskDueDate, setEditTaskDueDate] = useState('');
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
 
   const sensors = useSensors(
@@ -109,7 +108,6 @@ export function TaskListDetailPage() {
   const openEdit = (task: Task) => {
     setEditTaskTitle(task.title);
     setEditTaskDesc(task.description ?? '');
-    setEditTaskDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '');
     setEditTarget(task);
   };
 
@@ -121,7 +119,6 @@ export function TaskListDetailPage() {
       data: {
         title: editTaskTitle,
         description: editTaskDesc.trim() || null,
-        dueDate: editTaskDueDate || null,
       },
     });
     setEditTarget(null);
@@ -262,17 +259,6 @@ export function TaskListDetailPage() {
               rows={3}
               value={editTaskDesc}
               onChange={(e) => setEditTaskDesc(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Due date (optional)
-            </label>
-            <input
-              type="date"
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={editTaskDueDate}
-              onChange={(e) => setEditTaskDueDate(e.target.value)}
             />
           </div>
           <div className="flex justify-end gap-2">
