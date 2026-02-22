@@ -1,0 +1,44 @@
+services:
+  db:
+    ports:
+      - '5433:5432'
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+      args:
+        PROXY_CA_B64: ${PROXY_CA_CERT_B64:-}
+        PROXY_HOST: ${DOCKER_PROXY_HOST:-}
+    environment:
+      NODE_ENV: development
+      COOKIE_SECURE: 'false'
+    volumes:
+      - ./backend/src:/app/src:ro
+    command: sh -c "node_modules/.bin/prisma migrate deploy && npm run dev"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+      args:
+        PROXY_CA_B64: ${PROXY_CA_CERT_B64:-}
+        PROXY_HOST: ${DOCKER_PROXY_HOST:-}
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./frontend/src:/app/src
+    environment:
+      VITE_API_URL: http://backend:3001
+
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - '8090:80'
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started

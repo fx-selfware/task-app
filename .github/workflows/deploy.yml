@@ -1,0 +1,62 @@
+name: Test & Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run backend tests
+        run: docker compose -f docker-compose.test.yml run --rm backend-test
+
+      - name: Start stack for E2E
+        run: |
+          cp .env.example .env
+          sed -i 's/changeme/testpassword/g' .env
+          sed -i 's/change-this-to-a-long-random-secret/e2e-jwt-secret-at-least-16-chars/g' .env
+          sed -i 's/COOKIE_SECURE=true/COOKIE_SECURE=false/g' .env
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+          sleep 15
+
+      - name: Install e2e deps
+        run: npm ci
+        working-directory: e2e
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+        working-directory: e2e
+
+      - name: Run E2E tests
+        run: npx playwright test
+        working-directory: e2e
+        env:
+          BASE_URL: http://localhost
+
+      - name: Stop stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml down -v
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Azure VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd /app/task-app
+            git pull origin main
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans
+            echo "Deploy complete"

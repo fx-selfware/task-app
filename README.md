@@ -1,0 +1,108 @@
+# Task App
+
+A full-stack task management application with sharing and templates.
+
+**Stack**: React + Vite + Tailwind · Node.js + Fastify + Prisma · PostgreSQL · nginx
+
+---
+
+## Development
+
+```bash
+docker compose up --build   # first time or after dependency changes
+docker compose up           # day-to-day (hot reload via volume mount)
+```
+
+Migrations run automatically on backend startup. The frontend Vite dev server runs in a container with `./frontend/src` mounted for hot reload.
+Access the app at **http://localhost:8090**.
+
+---
+
+## Production / VM Setup
+
+### Prerequisites
+
+- Ubuntu 22.04+ VM with Docker installed
+- A domain pointed at the VM's public IP (via Cloudflare)
+
+```bash
+# Install Docker if needed
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER && newgrp docker
+```
+
+### First-time deploy
+
+```bash
+git clone <your-repo-url> /app/task-app
+cd /app/task-app
+cp .env.example .env
+nano .env   # fill in secrets (see below)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+> **Why `-f` flags?** `docker-compose.override.yml` is a dev-only file (Vite dev server, port 8090). Production must use only `docker-compose.yml` + `docker-compose.prod.yml` to get the built nginx image on port 80.
+
+### Environment variables
+
+| Variable | Description |
+|---|---|
+| `POSTGRES_PASSWORD` | Strong random password for the database |
+| `JWT_SECRET` | At least 32 random characters |
+| `COOKIE_SECURE` | `true` in production (Cloudflare terminates HTTPS) |
+
+### Verify
+
+```bash
+curl http://localhost/api/auth/me
+# → {"error":"Unauthorized"}  (expected — API is working)
+```
+
+---
+
+## CI / CD
+
+Every push to `main` triggers the GitHub Actions workflow:
+
+1. **Test** — runs backend API tests in Docker (`docker-compose.test.yml`), starts the full stack, runs Playwright E2E tests
+2. **Deploy** — SSHes into the VM, pulls latest, rebuilds and restarts containers, runs migrations
+
+### GitHub Secrets required
+
+| Secret | Value |
+|---|---|
+| `VM_HOST` | Public IP or DNS of the VM |
+| `VM_USER` | SSH username (e.g. `azureuser`) |
+| `VM_SSH_KEY` | Private key for SSH access |
+
+### Generate a deploy key (on the VM)
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/deploy_key -N ""
+cat ~/.ssh/deploy_key.pub >> ~/.ssh/authorized_keys
+cat ~/.ssh/deploy_key   # copy this → GitHub secret VM_SSH_KEY
+```
+
+---
+
+## Cloudflare HTTPS
+
+1. Add your domain to Cloudflare and update nameservers at your registrar
+2. DNS: add an A record pointing to the VM's public IP (proxy enabled)
+3. SSL/TLS: set mode to **Flexible** (Cloudflare ↔ browser = HTTPS, Cloudflare ↔ VM = HTTP)
+
+nginx listens on port 80 only — no certificates or certbot needed.
+
+---
+
+## Running tests manually
+
+```bash
+# Backend API tests (no host dependencies)
+docker compose -f docker-compose.test.yml run --rm backend-test
+
+# E2E tests (requires stack running)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T backend npx prisma migrate deploy
+cd e2e && npm ci && npx playwright test
+```

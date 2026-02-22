@@ -1,0 +1,55 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { tasksApi } from '../api/tasks';
+import type { TaskStatus } from '../types';
+
+export function useCreateTask(listId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { title: string; description?: string; dueDate?: string }) =>
+      tasksApi.create(listId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
+    },
+  });
+}
+
+export function useUpdateTask(listId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      data,
+    }: {
+      taskId: string;
+      data: {
+        title?: string;
+        description?: string;
+        status?: TaskStatus;
+        dueDate?: string | null;
+      };
+    }) => tasksApi.update(listId, taskId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
+    },
+  });
+}
+
+export function useDeleteTask(listId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: string) => tasksApi.delete(listId, taskId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
+    },
+  });
+}
+
+export function useReorderTasks(listId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderedIds: string[]) => tasksApi.reorder(listId, orderedIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
+    },
+  });
+}

@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  ownedLists   TaskList[]      @relation("OwnedLists")
+  sharedLists  TaskListShare[]
+  templates    TaskTemplate[]
+}
+
+model TaskList {
+  id        String          @id @default(cuid())
+  name      String
+  ownerId   String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  owner     User            @relation("OwnedLists", fields: [ownerId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+  shares    TaskListShare[]
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  order       Int
+  dueDate     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  taskListId  String
+  taskList    TaskList   @relation(fields: [taskListId], references: [id], onDelete: Cascade)
+
+  @@index([taskListId, order])
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model TaskListShare {
+  id         String     @id @default(cuid())
+  permission Permission @default(READ)
+  createdAt  DateTime   @default(now())
+  taskListId String
+  userId     String
+  taskList   TaskList   @relation(fields: [taskListId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskListId, userId])
+}
+
+enum Permission {
+  READ
+  WRITE
+}
+
+model TaskTemplate {
+  id        String         @id @default(cuid())
+  name      String
+  ownerId   String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  owner     User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  tasks     TemplateTask[]
+}
+
+model TemplateTask {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  order       Int
+  templateId  String
+  template    TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, order])
+}

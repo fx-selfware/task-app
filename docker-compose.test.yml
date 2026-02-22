@@ -1,0 +1,29 @@
+services:
+  db-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: taskapp_test
+      POSTGRES_USER: taskapp
+      POSTGRES_PASSWORD: testpassword
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U taskapp -d taskapp_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend-test:
+    build:
+      context: ./backend
+      target: dev
+      args:
+        PROXY_CA_B64: ${PROXY_CA_CERT_B64:-}
+        PROXY_HOST: ${DOCKER_PROXY_HOST:-}
+    environment:
+      DATABASE_URL: postgresql://taskapp:testpassword@db-test:5432/taskapp_test
+      JWT_SECRET: test-jwt-secret-at-least-16-chars
+      NODE_ENV: test
+      COOKIE_SECURE: 'false'
+    depends_on:
+      db-test:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && npm test"
