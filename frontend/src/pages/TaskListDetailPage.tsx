@@ -51,6 +51,10 @@ export function TaskListDetailPage() {
   const [showShares, setShowShares] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
   const [showDeleteList, setShowDeleteList] = useState(false);
+  const [editTarget, setEditTarget] = useState<Task | null>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState('');
+  const [editTaskDesc, setEditTaskDesc] = useState('');
+  const [editTaskDueDate, setEditTaskDueDate] = useState('');
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
 
   const sensors = useSensors(
@@ -100,6 +104,27 @@ export function TaskListDetailPage() {
   const handleDeleteList = async () => {
     await deleteList.mutateAsync(id!);
     navigate('/task-lists');
+  };
+
+  const openEdit = (task: Task) => {
+    setEditTaskTitle(task.title);
+    setEditTaskDesc(task.description ?? '');
+    setEditTaskDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '');
+    setEditTarget(task);
+  };
+
+  const handleEditTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    await updateTask.mutateAsync({
+      taskId: editTarget.id,
+      data: {
+        title: editTaskTitle,
+        description: editTaskDesc.trim() || null,
+        dueDate: editTaskDueDate || null,
+      },
+    });
+    setEditTarget(null);
   };
 
   return (
@@ -174,6 +199,7 @@ export function TaskListDetailPage() {
                     updateTask.mutate({ taskId: task.id, data: { status } })
                   }
                   onDelete={() => setDeleteTarget(task)}
+                  onEdit={() => openEdit(task)}
                 />
               ))}
             </div>
@@ -212,6 +238,49 @@ export function TaskListDetailPage() {
             </Button>
             <Button type="submit" loading={createTask.isPending}>
               Add
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Task Modal */}
+      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title="Edit Task">
+        <form onSubmit={handleEditTask} className="space-y-4">
+          <Input
+            label="Title"
+            value={editTaskTitle}
+            onChange={(e) => setEditTaskTitle(e.target.value)}
+            required
+            autoFocus
+          />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Description (optional)
+            </label>
+            <textarea
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              value={editTaskDesc}
+              onChange={(e) => setEditTaskDesc(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Due date (optional)
+            </label>
+            <input
+              type="date"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={editTaskDueDate}
+              onChange={(e) => setEditTaskDueDate(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setEditTarget(null)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" loading={updateTask.isPending}>
+              Save
             </Button>
           </div>
         </form>
@@ -290,11 +359,13 @@ function SortableTaskCard({
   canWrite,
   onStatusChange,
   onDelete,
+  onEdit,
 }: {
   task: Task;
   canWrite: boolean;
   onStatusChange: (status: TaskStatus) => void;
   onDelete: () => void;
+  onEdit: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id, disabled: !canWrite });
@@ -332,7 +403,10 @@ function SortableTaskCard({
           </svg>
         </button>
       )}
-      <div className="flex-1 min-w-0">
+      <div
+        className={`flex-1 min-w-0 ${canWrite ? 'cursor-pointer' : ''}`}
+        onClick={canWrite ? onEdit : undefined}
+      >
         <div className="flex items-center gap-2">
           <p
             className={`font-medium text-gray-900 ${task.status === 'DONE' ? 'line-through text-gray-400' : ''}`}
@@ -341,7 +415,7 @@ function SortableTaskCard({
           </p>
           {canWrite && (
             <button
-              onClick={() => onStatusChange(nextStatus)}
+              onClick={(e) => { e.stopPropagation(); onStatusChange(nextStatus); }}
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[task.status]}`}
             >
               {task.status.replace('_', ' ')}

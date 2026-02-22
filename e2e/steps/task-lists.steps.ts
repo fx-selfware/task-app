@@ -21,10 +21,40 @@ Then('{string} appears in the sidebar', async ({ page }, name: string) => {
   await expect(page.locator('nav').getByText(name)).toBeVisible({ timeout: 5000 });
 });
 
+When('I open the task list {string}', async ({ page }, name: string) => {
+  await page.getByText(name, { exact: true }).first().click();
+  await page.waitForURL(/\/task-lists\/[a-z0-9]+/);
+});
+
 When('I open the share modal for {string}', async ({ page }, name: string) => {
   await page.getByText(name).first().click();
   await page.waitForURL(/\/task-lists\/[a-z0-9]+/);
   await page.getByRole('button', { name: 'Share' }).click();
+});
+
+When('I add a task named {string}', async ({ page }, name: string) => {
+  await page.getByRole('button', { name: '+ Task' }).click();
+  await page.getByLabel('Title').fill(name);
+  await page.getByRole('button', { name: 'Add' }).click();
+  await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });
+});
+
+When('I edit the task {string} to be named {string}', async ({ page }, oldName: string, newName: string) => {
+  await page.locator('p').filter({ hasText: oldName }).first().click();
+  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
+  const titleInput = page.getByLabel('Title');
+  await titleInput.clear();
+  await titleInput.fill(newName);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
+});
+
+Then('{string} is visible in the task list', async ({ page }, name: string) => {
+  await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });
+});
+
+Then('{string} is no longer visible in the task list', async ({ page }, name: string) => {
+  await expect(page.getByText(name)).not.toBeVisible({ timeout: 3000 });
 });
 
 Given('a collaborator exists with email {string}', async ({ request }, email: string) => {

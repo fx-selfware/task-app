@@ -23,7 +23,7 @@ export function useUpdateTask(listId: string) {
       taskId: string;
       data: {
         title?: string;
-        description?: string;
+        description?: string | null;
         status?: TaskStatus;
         dueDate?: string | null;
       };

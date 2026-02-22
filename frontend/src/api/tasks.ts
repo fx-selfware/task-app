@@ -10,7 +10,7 @@ export const tasksApi = {
   update: (
     listId: string,
     taskId: string,
-    data: { title?: string; description?: string; status?: TaskStatus; dueDate?: string | null },
+    data: { title?: string; description?: string | null; status?: TaskStatus; dueDate?: string | null },
   ) => api.patch<{ task: Task }>(`/task-lists/${listId}/tasks/${taskId}`, data),
 
   delete: (listId: string, taskId: string) =>
