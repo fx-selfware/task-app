@@ -5,6 +5,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-taskapp}
       POSTGRES_USER: ${POSTGRES_USER:-taskapp}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-taskapp} -d ${POSTGRES_DB:-taskapp}']
       interval: 5s
@@ -47,4 +49,7 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  pgdata:
 
