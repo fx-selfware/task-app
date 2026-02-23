@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Do not create git commits unless explicitly asked to do so.
 
+When updating documentation, apply changes to all relevant docs in the repo (e.g. both CLAUDE.md and README.md), not just one file.
+
 ## Commands
 
 ### Backend
