@@ -47,7 +47,8 @@ docker compose up --build -d      # dev (port 8090, hot reload)
 # the generated Prisma client) is baked into the image, not bind-mounted.
 docker compose down
 
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d   # prod (port 80)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d   # prod (HTTPS via Caddy)
+# Requires DOMAIN in .env (e.g. task-app-fx.westus2.cloudapp.azure.com)
 ```
 
 ## Architecture
@@ -59,7 +60,7 @@ Browser → nginx → /api/* → backend (Fastify :3001)
                 → /*     → frontend (Vite :5173 in dev, static files in prod)
 ```
 
-In dev, a separate nginx container (`nginx/nginx.dev.conf`) proxies both. In prod, nginx is baked into the frontend image (`frontend/nginx.conf`).
+In dev, a separate nginx container (`nginx/nginx.dev.conf`) proxies both. In prod, Caddy terminates TLS (auto Let's Encrypt) and reverse-proxies to the frontend container, which has nginx baked in (`frontend/nginx.conf`).
 
 ### Backend (`backend/src/`)
 
@@ -110,9 +111,13 @@ BASE_URL=http://localhost:8099 npm --prefix e2e run test:ac
 |---|---|
 | `docker-compose.yml` | Base: db, backend, frontend (no ports exposed) |
 | `docker-compose.override.yml` | Dev: hot reload, nginx on :8090 |
-| `docker-compose.prod.yml` | Prod: exposes frontend on :80 |
+| `docker-compose.prod.yml` | Prod: Caddy reverse proxy with auto HTTPS (:80, :443) |
 | `docker-compose.test.yml` | Test: backend BDD runner + E2E stack on :8099 |
 
 ### Environment variables
 
-Required at runtime: `DATABASE_URL`, `JWT_SECRET`, `COOKIE_SECURE` (`false` in dev/test, `true` in prod). See `.env.example`.
+Required at runtime: `DATABASE_URL`, `JWT_SECRET`, `COOKIE_SECURE` (`false` in dev/test, `true` in prod), `DOMAIN` (prod only — FQDN for Caddy's TLS certificate). See `.env.example`.
+
+### Deployment
+
+Production runs on a single Azure VM (`Standard_B1s`) at `task-app-fx.westus2.cloudapp.azure.com`. Pushing to `main` triggers GitHub Actions: backend BDD + E2E tests, then SSH deploy to the VM. GitHub secrets required: `VM_HOST`, `VM_USER`, `VM_SSH_KEY`.

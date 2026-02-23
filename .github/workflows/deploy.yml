@@ -3,6 +3,13 @@ name: Test & Deploy
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - '.env.example'
+      - '.github/**'
+      - '.gitignore'
+      - 'docker-compose.override.yml'
 
 jobs:
   test:
@@ -35,9 +42,24 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
+      - name: Check for deploy-worthy changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            app:
+              - 'backend/**'
+              - 'frontend/**'
+              - 'nginx/**'
+              - 'Caddyfile'
+              - 'docker-compose.yml'
+              - 'docker-compose.prod.yml'
+
       - uses: actions/checkout@v4
+        if: steps.filter.outputs.app == 'true'
 
       - name: Deploy to Azure VM
+        if: steps.filter.outputs.app == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VM_HOST }}

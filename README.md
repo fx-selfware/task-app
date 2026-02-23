@@ -2,7 +2,7 @@
 
 A full-stack task management application with sharing and templates.
 
-**Stack**: React + Vite + Tailwind · Node.js + Fastify + Prisma · PostgreSQL · nginx
+**Stack**: React + Vite + Tailwind · Node.js + Fastify + Prisma · PostgreSQL · Caddy · nginx
 
 ---
 
@@ -22,8 +22,9 @@ Access the app at **http://localhost:8090**.
 
 ### Prerequisites
 
-- Ubuntu 22.04+ VM with Docker installed
-- A domain pointed at the VM's public IP (via Cloudflare)
+- Azure VM (or any Ubuntu 22.04+ host) with Docker installed
+- Ports 80 and 443 open
+- A DNS name pointing at the VM's public IP (e.g. Azure DNS label: `<name>.<region>.cloudapp.azure.com`)
 
 ```bash
 # Install Docker if needed
@@ -34,27 +35,29 @@ sudo usermod -aG docker $USER && newgrp docker
 ### First-time deploy
 
 ```bash
-git clone <your-repo-url> /app/task-app
+git clone git@github.com:fanxia0404/task-app.git /app/task-app
 cd /app/task-app
 cp .env.example .env
 nano .env   # fill in secrets (see below)
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-> **Why `-f` flags?** `docker-compose.override.yml` is a dev-only file (Vite dev server, port 8090). Production must use only `docker-compose.yml` + `docker-compose.prod.yml` to get the built nginx image on port 80.
+> **Why `-f` flags?** `docker-compose.override.yml` is a dev-only file (Vite dev server, port 8090). Production must use only `docker-compose.yml` + `docker-compose.prod.yml` to get Caddy HTTPS + the built nginx image.
 
 ### Environment variables
 
 | Variable | Description |
 |---|---|
-| `POSTGRES_PASSWORD` | Strong random password for the database |
+| `POSTGRES_PASSWORD` | Strong random password (avoid `/`, `+`, `=` or URL-encode them in `DATABASE_URL`) |
+| `DATABASE_URL` | `postgresql://taskapp:<password>@db:5432/taskapp` |
 | `JWT_SECRET` | At least 32 random characters |
-| `COOKIE_SECURE` | `true` in production (Cloudflare terminates HTTPS) |
+| `COOKIE_SECURE` | `true` in production |
+| `DOMAIN` | FQDN for Caddy's auto TLS (e.g. `task-app-fx.westus2.cloudapp.azure.com`) |
 
 ### Verify
 
 ```bash
-curl http://localhost/api/auth/me
+curl https://<your-domain>/api/auth/me
 # → {"error":"Unauthorized"}  (expected — API is working)
 ```
 
@@ -85,13 +88,9 @@ cat ~/.ssh/deploy_key   # copy this → GitHub secret VM_SSH_KEY
 
 ---
 
-## Cloudflare HTTPS
+## HTTPS
 
-1. Add your domain to Cloudflare and update nameservers at your registrar
-2. DNS: add an A record pointing to the VM's public IP (proxy enabled)
-3. SSL/TLS: set mode to **Flexible** (Cloudflare ↔ browser = HTTPS, Cloudflare ↔ VM = HTTP)
-
-nginx listens on port 80 only — no certificates or certbot needed.
+Caddy (in `docker-compose.prod.yml`) automatically obtains and renews a Let's Encrypt TLS certificate for the domain set in the `DOMAIN` environment variable. No manual certificate setup is needed — just ensure ports 80 and 443 are reachable and `DOMAIN` resolves to the VM's IP.
 
 ---
 
