@@ -122,4 +122,7 @@ docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend
 docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
 npm --prefix e2e install && BASE_URL=http://localhost:8099 npm --prefix e2e test
 docker compose -f docker-compose.yml -f docker-compose.test.yml down
+
+# View HTML test report (after a test run)
+npx --prefix e2e playwright show-report e2e/playwright-report
 ```

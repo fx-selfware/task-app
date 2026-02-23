@@ -37,6 +37,9 @@ docker compose -f docker-compose.yml -f docker-compose.test.yml down
 
 # Interactive mode against the dev stack (port 8090):
 npm --prefix e2e install && npm --prefix e2e run test:ui
+
+# View HTML test report (after a test run):
+npx --prefix e2e playwright show-report e2e/playwright-report
 ```
 
 ### Full stack
