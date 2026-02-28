@@ -35,7 +35,7 @@ export async function shareRoutes(app: FastifyInstance) {
 
       try {
         const share = await createShare(app.prisma, id, request.user.userId, email, perm);
-        publish(id, { type: 'tasks-changed', userId: request.user.userId });
+        publish(id);
         return reply.status(201).send({ share });
       } catch (err: unknown) {
         const e = err as Error & { statusCode?: number };
@@ -61,7 +61,7 @@ export async function shareRoutes(app: FastifyInstance) {
           request.user.userId,
           permission,
         );
-        publish(id, { type: 'tasks-changed', userId: request.user.userId });
+        publish(id);
         return reply.send({ share });
       } catch (err: unknown) {
         const e = err as Error & { statusCode?: number };
@@ -78,7 +78,7 @@ export async function shareRoutes(app: FastifyInstance) {
 
       try {
         await deleteShare(app.prisma, id, sid, request.user.userId);
-        publish(id, { type: 'tasks-changed', userId: request.user.userId });
+        publish(id);
         return reply.status(204).send();
       } catch (err: unknown) {
         const e = err as Error & { statusCode?: number };

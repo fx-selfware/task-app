@@ -1,9 +1,4 @@
-export interface TaskListEvent {
-  type: 'tasks-changed';
-  userId: string;
-}
-
-type Listener = (event: TaskListEvent) => void;
+type Listener = () => void;
 
 const subscribers = new Map<string, Set<Listener>>();
 
@@ -24,11 +19,6 @@ export function subscribe(listId: string, listener: Listener): () => void {
   };
 }
 
-export function publish(listId: string, event: TaskListEvent): void {
-  const set = subscribers.get(listId);
-  if (set) {
-    for (const listener of set) {
-      listener(event);
-    }
-  }
+export function publish(listId: string): void {
+  subscribers.get(listId)?.forEach((fn) => fn());
 }

@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { requireAuth } from '../middleware/requireAuth';
 import { getTaskListWithAccess } from '../services/taskLists';
-import { subscribe, TaskListEvent } from '../services/events';
+import { subscribe } from '../services/events';
 
 export async function eventRoutes(app: FastifyInstance) {
   app.get(
@@ -17,7 +17,6 @@ export async function eventRoutes(app: FastifyInstance) {
         return reply.status(e.statusCode ?? 500).send({ error: e.message });
       }
 
-      // Hijack first to prevent Fastify from managing the response
       await reply.hijack();
 
       reply.raw.writeHead(200, {
@@ -28,9 +27,9 @@ export async function eventRoutes(app: FastifyInstance) {
       });
       reply.raw.write(':connected\n\n');
 
-      const unsubscribe = subscribe(id, (event: TaskListEvent) => {
+      const unsubscribe = subscribe(id, () => {
         try {
-          reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
+          reply.raw.write('data: update\n\n');
         } catch {
           // Client already disconnected
         }

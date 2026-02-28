@@ -51,7 +51,7 @@ export async function taskListRoutes(app: FastifyInstance) {
         return reply.status(403).send({ error: 'Forbidden' });
       }
       const list = await updateTaskList(app.prisma, id, request.user.userId, name);
-      publish(id, { type: 'tasks-changed', userId: request.user.userId });
+      publish(id);
       return reply.send({ list });
     } catch (err: unknown) {
       const e = err as Error & { statusCode?: number };
@@ -69,7 +69,7 @@ export async function taskListRoutes(app: FastifyInstance) {
       if (existing.ownerId !== request.user.userId) {
         return reply.status(403).send({ error: 'Forbidden' });
       }
-      publish(id, { type: 'tasks-changed', userId: request.user.userId });
+      publish(id);
       await deleteTaskList(app.prisma, id, request.user.userId);
       return reply.status(204).send();
     } catch (err: unknown) {
