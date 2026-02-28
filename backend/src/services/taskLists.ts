@@ -89,14 +89,16 @@ export async function updateTaskList(
   name: string,
 ) {
   const list = await prisma.taskList.findUnique({ where: { id: listId } });
-  if (!list || list.ownerId !== userId) httpError(404, 'Not found');
+  if (!list) httpError(404, 'Not found');
+  if (list.ownerId !== userId) httpError(403, 'Forbidden');
 
   return prisma.taskList.update({ where: { id: listId }, data: { name } });
 }
 
 export async function deleteTaskList(prisma: PrismaClient, listId: string, userId: string) {
   const list = await prisma.taskList.findUnique({ where: { id: listId } });
-  if (!list || list.ownerId !== userId) httpError(404, 'Not found');
+  if (!list) httpError(404, 'Not found');
+  if (list.ownerId !== userId) httpError(403, 'Forbidden');
 
   await prisma.taskList.delete({ where: { id: listId } });
 }
