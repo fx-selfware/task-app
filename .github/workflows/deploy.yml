@@ -7,7 +7,6 @@ on:
       - '*.md'
       - 'docs/**'
       - '.env.example'
-      - '.github/**'
       - '.gitignore'
       - 'docker-compose.override.yml'
 
@@ -91,6 +90,7 @@ jobs:
           target: production
           push: true
           tags: ghcr.io/fanxia0404/task-app-frontend:latest
+          build-args: COMMIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
