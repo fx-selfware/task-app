@@ -17,6 +17,15 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!open) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   return (
@@ -40,7 +49,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
             aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

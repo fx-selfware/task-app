@@ -31,7 +31,8 @@ When('I open the task list {string}', async ({ page }, name: string) => {
 When('I open the share modal for {string}', async ({ page }, name: string) => {
   await page.getByText(name).first().click();
   await page.waitForURL(/\/task-lists\/[a-z0-9]+/);
-  await page.getByRole('button', { name: 'Share' }).click();
+  await page.getByRole('button', { name: 'List actions' }).click();
+  await page.getByRole('menuitem', { name: 'Share' }).click();
 });
 
 When('I add a task named {string}', async ({ page }, name: string) => {

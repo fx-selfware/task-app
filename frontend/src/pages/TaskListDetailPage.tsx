@@ -32,6 +32,7 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Spinner } from '../components/Spinner';
 import { SharesModal } from './SharesModal';
+import { OverflowMenu } from '../components/OverflowMenu';
 import { useTaskListEvents } from '../hooks/useTaskListEvents';
 import type { Task } from '../types';
 
@@ -143,52 +144,34 @@ export function TaskListDetailPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{list.name}</h1>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-bold text-gray-900">{list.name}</h1>
           <p className="text-sm text-gray-500">
             {isOwner ? 'Owner' : `Shared · ${permission.toLowerCase()}`}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {canWrite && (
             <Button variant="secondary" size="sm" onClick={() => setShowAddTask(true)}>
               + Task
             </Button>
           )}
           {isOwner && (
-            <>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowShares(true)}
-              >
-                Share
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setRenameName(list.name);
-                  setShowRename(true);
-                }}
-              >
-                Rename
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => setShowDeleteList(true)}
-              >
-                Delete
-              </Button>
-            </>
+            <OverflowMenu
+              aria-label="List actions"
+              items={[
+                { label: 'Share', onClick: () => setShowShares(true) },
+                { label: 'Rename', onClick: () => { setRenameName(list.name); setShowRename(true); } },
+                { label: 'Delete', onClick: () => setShowDeleteList(true), variant: 'danger' },
+              ]}
+            />
           )}
         </div>
       </div>
 
       {tasks.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
+        <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 sm:p-12 text-center">
           <p className="text-gray-500">
             {canWrite ? 'No tasks yet. Add one above!' : 'No tasks in this list.'}
           </p>
@@ -226,14 +209,14 @@ export function TaskListDetailPage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setShowCompleted((v) => !v)}
-                  className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                  className="py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
                 >
                   Completed ({doneTasks.length}) {showCompleted ? '▲' : '▶'}
                 </button>
                 {showCompleted && canWrite && (
                   <button
                     onClick={() => deleteCompletedTasks.mutate()}
-                    className="text-sm text-red-500 hover:text-red-700"
+                    className="py-2 text-sm text-red-500 hover:text-red-700"
                   >
                     Delete completed
                   </button>
@@ -436,7 +419,7 @@ function SortableTaskCard({
         checked={false}
         onChange={canWrite ? onCheck : undefined}
         disabled={!canWrite}
-        className="mt-1 h-4 w-4 cursor-pointer rounded border-gray-300"
+        className="mt-1 h-5 w-5 cursor-pointer rounded border-gray-300"
         aria-label={`Mark "${task.title}" as done`}
       />
       <div
@@ -451,7 +434,7 @@ function SortableTaskCard({
       {canWrite && (
         <button
           onClick={onDelete}
-          className="mt-0.5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
+          className="mt-0.5 p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
           aria-label="Delete task"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -469,7 +452,7 @@ function SortableTaskCard({
           {...attributes}
           {...listeners}
           style={{ touchAction: 'none' }}
-          className="mt-0.5 cursor-grab text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+          className="mt-0.5 p-2 cursor-grab text-gray-300 hover:text-gray-500 active:cursor-grabbing"
           aria-label="Drag to reorder"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -504,7 +487,7 @@ function CompletedTaskCard({
         checked={true}
         onChange={canWrite ? onUncheck : undefined}
         disabled={!canWrite}
-        className="mt-1 h-4 w-4 cursor-pointer rounded border-gray-300"
+        className="mt-1 h-5 w-5 cursor-pointer rounded border-gray-300"
         aria-label={`Mark "${task.title}" as todo`}
       />
       <div className="flex-1 min-w-0">
@@ -516,7 +499,7 @@ function CompletedTaskCard({
       {canWrite && (
         <button
           onClick={onDelete}
-          className="mt-0.5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
+          className="mt-0.5 p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
           aria-label="Delete task"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

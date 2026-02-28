@@ -8,7 +8,7 @@ interface LayoutProps {
 }
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  `flex items-center rounded-lg px-2 py-1.5 text-sm transition-colors ${
+  `flex items-center rounded-lg px-2 py-2 text-sm transition-colors ${
     isActive
       ? 'bg-blue-50 text-blue-700 font-medium'
       : 'text-gray-700 hover:bg-gray-100'
@@ -63,7 +63,7 @@ export function Layout({ children }: LayoutProps) {
               <p className="px-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
                 My Lists
               </p>
-              <div className="mt-1 space-y-0.5">
+              <div className="mt-1 space-y-1">
                 {allLists.map((list) => (
                   <NavLink
                     key={list.id}
@@ -129,7 +129,7 @@ export function Layout({ children }: LayoutProps) {
               </div>
               <button
                 onClick={handleLogout}
-                className="rounded p-1 text-gray-400 hover:text-gray-700"
+                className="rounded p-2 text-gray-400 hover:text-gray-700"
                 title="Log out"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

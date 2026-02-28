@@ -42,7 +42,7 @@ export function TemplateSharesModal({ open, onClose, templateId }: TemplateShare
       <div className="space-y-4">
         {/* Invite form */}
         <form onSubmit={handleInvite} className="space-y-3">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Input
               placeholder="Email address"
               type="email"
@@ -54,7 +54,7 @@ export function TemplateSharesModal({ open, onClose, templateId }: TemplateShare
             <select
               value={permission}
               onChange={(e) => setPermission(e.target.value as Permission)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="READ">Read</option>
               <option value="WRITE">Write</option>
@@ -94,14 +94,14 @@ export function TemplateSharesModal({ open, onClose, templateId }: TemplateShare
                         permission: e.target.value as Permission,
                       })
                     }
-                    className="rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="rounded border border-gray-300 px-2 py-1 text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="READ">Read</option>
                     <option value="WRITE">Write</option>
                   </select>
                   <button
                     onClick={() => deleteShare.mutate(share.id)}
-                    className="text-gray-400 hover:text-red-500"
+                    className="p-2 text-gray-400 hover:text-red-500"
                     aria-label="Revoke access"
                   >
                     <svg

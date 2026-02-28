@@ -38,7 +38,8 @@ When('I open the template {string}', async ({ page }, name: string) => {
 });
 
 When('I open the template share modal', async ({ page }) => {
-  await page.getByRole('button', { name: 'Share' }).click();
+  await page.getByRole('button', { name: 'Template actions' }).click();
+  await page.getByRole('menuitem', { name: 'Share' }).click();
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
 });
 

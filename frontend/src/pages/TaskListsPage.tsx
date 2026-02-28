@@ -49,7 +49,7 @@ export function TaskListsPage() {
       </div>
 
       {owned.length === 0 && shared.length === 0 && (
-        <div className="rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
+        <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 sm:p-12 text-center">
           <p className="text-gray-500">No task lists yet. Create one to get started!</p>
         </div>
       )}
@@ -144,7 +144,7 @@ function ListCard({
       {onDelete && (
         <button
           onClick={onDelete}
-          className="absolute right-2 top-2 rounded p-1 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
+          className="absolute right-2 top-2 rounded p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
           aria-label="Delete list"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
