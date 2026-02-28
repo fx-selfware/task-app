@@ -87,6 +87,7 @@ Before(async function (this: AppWorld) {
 
 export async function clearDb(prisma: PrismaClient) {
   await prisma.$transaction([
+    prisma.templateShare.deleteMany(),
     prisma.templateTask.deleteMany(),
     prisma.taskTemplate.deleteMany(),
     prisma.taskListShare.deleteMany(),

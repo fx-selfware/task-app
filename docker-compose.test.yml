@@ -20,6 +20,7 @@ services:
       JWT_SECRET: test-jwt-secret-at-least-32-chars!
       NODE_ENV: test
       COOKIE_SECURE: 'false'
+      ADMIN_EMAILS: admin@test.com
 
   frontend:
     ports:

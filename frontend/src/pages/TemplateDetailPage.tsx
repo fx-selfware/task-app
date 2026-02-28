@@ -14,11 +14,17 @@ import { Input } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Spinner } from '../components/Spinner';
+import { TemplateSharesModal } from './TemplateSharesModal';
 import type { TemplateTask } from '../types';
 
 export function TemplateDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: template, isLoading } = useTemplate(id!);
+  const { data, isLoading } = useTemplate(id!);
+  const template = data?.template;
+  const isOwner = data?.isOwner ?? false;
+  const permission = data?.permission;
+  const canWrite = permission === 'WRITE';
+
   const renameTemplate = useRenameTemplate();
   const createTask = useCreateTemplateTask(id!);
   const updateTask = useUpdateTemplateTask(id!);
@@ -37,6 +43,7 @@ export function TemplateDetailPage() {
   const [showApply, setShowApply] = useState(false);
   const [applyListId, setApplyListId] = useState('');
   const [applySuccess, setApplySuccess] = useState(false);
+  const [showShares, setShowShares] = useState(false);
 
   if (isLoading) return <Spinner className="mt-8" />;
   if (!template) return <p className="text-gray-500">Template not found.</p>;
@@ -81,26 +88,42 @@ export function TemplateDetailPage() {
     <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{template.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">{template.name}</h1>
+            {!isOwner && (
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                shared
+              </span>
+            )}
+          </div>
           <p className="text-sm text-gray-500">
             {template.tasks?.length ?? 0} task
             {(template.tasks?.length ?? 0) !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              setRenameName(template.name);
-              setShowRename(true);
-            }}
-          >
-            Rename
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => setShowAddTask(true)}>
-            + Task
-          </Button>
+          {isOwner && (
+            <Button variant="secondary" size="sm" onClick={() => setShowShares(true)}>
+              Share
+            </Button>
+          )}
+          {canWrite && (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setRenameName(template.name);
+                  setShowRename(true);
+                }}
+              >
+                Rename
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setShowAddTask(true)}>
+                + Task
+              </Button>
+            </>
+          )}
           <Button size="sm" onClick={() => setShowApply(true)}>
             Apply to List
           </Button>
@@ -124,37 +147,41 @@ export function TemplateDetailPage() {
                   <p className="text-sm text-gray-500">{task.description}</p>
                 )}
               </div>
-              <button
-                onClick={() => {
-                  setEditingTask(task);
-                  setEditTitle(task.title);
-                }}
-                className="text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-blue-500"
-                aria-label="Edit task"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={() => setDeleteTarget(task)}
-                className="text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
-                aria-label="Delete task"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+              {canWrite && (
+                <>
+                  <button
+                    onClick={() => {
+                      setEditingTask(task);
+                      setEditTitle(task.title);
+                    }}
+                    className="text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-blue-500"
+                    aria-label="Edit task"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget(task)}
+                    className="text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
+                    aria-label="Delete task"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -270,7 +297,7 @@ export function TemplateDetailPage() {
                   required
                   className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Select a list…</option>
+                  <option value="">Select a list...</option>
                   {allLists.map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.name}
@@ -294,6 +321,13 @@ export function TemplateDetailPage() {
           )}
         </form>
       </Modal>
+
+      {/* Shares modal */}
+      <TemplateSharesModal
+        open={showShares}
+        onClose={() => setShowShares(false)}
+        templateId={id!}
+      />
     </div>
   );
 }

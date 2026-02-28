@@ -45,7 +45,7 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-14 items-center border-b px-4">
-            <Link to="/task-lists" className="text-lg font-bold text-blue-600">
+            <Link to="/task-lists" onClick={() => setSidebarOpen(false)} className="text-lg font-bold text-blue-600">
               TaskApp
             </Link>
           </div>
@@ -107,6 +107,29 @@ export function Layout({ children }: LayoutProps) {
               >
                 Templates
               </NavLink>
+              {user?.role === 'ADMIN' && (
+                <NavLink
+                  to="/admin"
+                  onClick={() => setSidebarOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center rounded-lg px-2 py-1.5 text-sm transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-700 font-medium'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                    />
+                  </svg>
+                  Admin
+                </NavLink>
+              )}
             </div>
           </nav>
 
@@ -159,7 +182,7 @@ export function Layout({ children }: LayoutProps) {
               />
             </svg>
           </button>
-          <Link to="/task-lists" className="text-lg font-bold text-blue-600">
+          <Link to="/task-lists" onClick={() => setSidebarOpen(false)} className="text-lg font-bold text-blue-600">
             TaskApp
           </Link>
         </header>

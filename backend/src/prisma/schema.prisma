@@ -7,16 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
-  id           String          @id @default(cuid())
-  email        String          @unique
-  passwordHash String
-  name         String
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  ownedLists   TaskList[]      @relation("OwnedLists")
-  sharedLists  TaskListShare[]
-  templates    TaskTemplate[]
+  id              String            @id @default(cuid())
+  email           String            @unique
+  passwordHash    String
+  name            String
+  role            Role              @default(USER)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  ownedLists      TaskList[]        @relation("OwnedLists")
+  sharedLists     TaskListShare[]
+  templates       TaskTemplate[]
+  sharedTemplates TemplateShare[]
 }
 
 model TaskList {
@@ -67,13 +74,26 @@ enum Permission {
 }
 
 model TaskTemplate {
-  id        String         @id @default(cuid())
+  id        String          @id @default(cuid())
   name      String
   ownerId   String
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  owner     User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  owner     User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   tasks     TemplateTask[]
+  shares    TemplateShare[]
+}
+
+model TemplateShare {
+  id         String       @id @default(cuid())
+  permission Permission   @default(READ)
+  createdAt  DateTime     @default(now())
+  templateId String
+  userId     String
+  template   TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, userId])
 }
 
 model TemplateTask {

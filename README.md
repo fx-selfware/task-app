@@ -1,6 +1,6 @@
 # Task App
 
-A full-stack task management application with sharing and templates.
+A full-stack task management application with sharing, templates, and admin user management.
 
 **Stack**: React + Vite + Tailwind · Node.js + Fastify + Prisma · PostgreSQL · Caddy · nginx
 
@@ -53,6 +53,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 | `JWT_SECRET` | At least 32 random characters |
 | `COOKIE_SECURE` | `true` in production |
 | `DOMAIN` | FQDN for Caddy's auto TLS (e.g. `task-app-fx.westus2.cloudapp.azure.com`) |
+| `ADMIN_EMAILS` | Optional. Comma-separated emails that get admin role (e.g. `alice@example.com,bob@example.com`). Users matching these emails are promoted to admin on register or next login. Admins can view all users and reset passwords via the Admin page. |
 
 ### Verify
 

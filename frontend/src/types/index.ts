@@ -5,6 +5,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  role: 'USER' | 'ADMIN';
   createdAt: string;
 }
 
@@ -50,6 +51,12 @@ export interface TemplateTask {
   templateId: string;
 }
 
+export interface TemplateShare {
+  id: string;
+  permission: Permission;
+  user: { id: string; email: string; name: string };
+}
+
 export interface TaskTemplate {
   id: string;
   name: string;
@@ -58,4 +65,9 @@ export interface TaskTemplate {
   updatedAt: string;
   tasks?: TemplateTask[];
   _count?: { tasks: number };
+}
+
+export interface TemplateSummary extends TaskTemplate {
+  role: 'owner' | 'shared';
+  permission?: Permission;
 }

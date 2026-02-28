@@ -6,17 +6,20 @@ import { Input } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Spinner } from '../components/Spinner';
-import type { TaskTemplate } from '../types';
+import type { TemplateSummary } from '../types';
 
 export function TemplatesPage() {
-  const { data: templates = [], isLoading } = useTemplates();
+  const { data, isLoading } = useTemplates();
   const createTemplate = useCreateTemplate();
   const deleteTemplate = useDeleteTemplate();
+
+  const owned = data?.owned ?? [];
+  const shared = data?.shared ?? [];
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [createError, setCreateError] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<TaskTemplate | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TemplateSummary | null>(null);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +35,8 @@ export function TemplatesPage() {
 
   if (isLoading) return <Spinner className="mt-8" />;
 
+  const allTemplates = [...owned, ...shared];
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -39,7 +44,7 @@ export function TemplatesPage() {
         <Button onClick={() => setShowCreate(true)}>+ New Template</Button>
       </div>
 
-      {templates.length === 0 ? (
+      {allTemplates.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
           <p className="text-gray-500">
             No templates yet. Create one to quickly populate task lists!
@@ -47,37 +52,46 @@ export function TemplatesPage() {
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {templates.map((t) => (
+          {allTemplates.map((t) => (
             <div
               key={t.id}
               className="group relative rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
             >
               <Link to={`/templates/${t.id}`} className="block">
-                <h3 className="font-semibold text-gray-900">{t.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-900">{t.name}</h3>
+                  {t.role === 'shared' && (
+                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                      shared
+                    </span>
+                  )}
+                </div>
                 <p className="mt-1 text-sm text-gray-500">
                   {t._count?.tasks ?? 0} task
                   {(t._count?.tasks ?? 0) !== 1 ? 's' : ''}
                 </p>
               </Link>
-              <button
-                onClick={() => setDeleteTarget(t)}
-                className="absolute right-2 top-2 rounded p-1 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
-                aria-label="Delete template"
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              {t.role === 'owner' && (
+                <button
+                  onClick={() => setDeleteTarget(t)}
+                  className="absolute right-2 top-2 rounded p-1 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
+                  aria-label="Delete template"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              )}
             </div>
           ))}
         </div>

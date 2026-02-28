@@ -7,6 +7,7 @@ import { TaskListsPage } from './pages/TaskListsPage';
 import { TaskListDetailPage } from './pages/TaskListDetailPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { TemplateDetailPage } from './pages/TemplateDetailPage';
+import { AdminPage } from './pages/AdminPage';
 
 export function App() {
   return (
@@ -49,6 +50,16 @@ export function App() {
           <AuthGuard>
             <Layout>
               <TemplateDetailPage />
+            </Layout>
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <AuthGuard>
+            <Layout>
+              <AdminPage />
             </Layout>
           </AuthGuard>
         }

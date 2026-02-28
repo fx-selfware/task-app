@@ -78,13 +78,15 @@ In dev, a separate nginx container (`nginx/nginx.dev.conf`) proxies both. In pro
 
 Auth is enforced via `middleware/requireAuth.ts`, a Fastify preHandler that verifies a JWT from the `token` HttpOnly cookie and sets `request.user`. Every protected route passes it as `preHandler: requireAuth`.
 
-Route files map 1:1 to domain resources: `auth`, `taskLists`, `tasks`, `shares`, `templates`. Each delegates business logic to a matching file in `services/`.
+Route files map 1:1 to domain resources: `auth`, `taskLists`, `tasks`, `shares`, `templates`, `template-shares`, `admin`. Each delegates business logic to a matching file in `services/`.
+
+Admin access is enforced via `middleware/requireAdmin.ts`, a Fastify preHandler that checks `request.user.role === 'ADMIN'` (returns 403 otherwise). Used as `preHandler: [requireAuth, requireAdmin]`.
 
 ### Database
 
 Prisma schema lives at `backend/src/prisma/schema.prisma`. Migrations run automatically on startup via `prisma migrate deploy` (see `backend/src/index.ts` or the Docker `command:`).
 
-The data model: `User` owns `TaskList`s; `TaskList` has `Task`s (ordered by `order` field) and `TaskListShare`s (READ/WRITE permission per user). `TaskTemplate` / `TemplateTask` are a separate template system owned per user.
+The data model: `User` (with `role`: USER/ADMIN) owns `TaskList`s; `TaskList` has `Task`s (ordered by `order` field) and `TaskListShare`s (READ/WRITE permission per user). `TaskTemplate` / `TemplateTask` support sharing via `TemplateShare` (same READ/WRITE model). Admin designation is driven by the `ADMIN_EMAILS` env var (comma-separated); matching users are promoted on register/login.
 
 ### Testing
 
@@ -123,7 +125,7 @@ BASE_URL=http://localhost:8099 npm --prefix e2e run test:ac
 
 ### Environment variables
 
-Required at runtime: `DATABASE_URL`, `JWT_SECRET`, `COOKIE_SECURE` (`false` in dev/test, `true` in prod), `DOMAIN` (prod only — FQDN for Caddy's TLS certificate). See `.env.example`.
+Required at runtime: `DATABASE_URL`, `JWT_SECRET`, `COOKIE_SECURE` (`false` in dev/test, `true` in prod), `DOMAIN` (prod only — FQDN for Caddy's TLS certificate). Optional: `ADMIN_EMAILS` (comma-separated emails that get admin role). See `.env.example`.
 
 ### Network / firewall
 

@@ -4,7 +4,9 @@ import { taskListRoutes } from './taskLists';
 import { taskRoutes } from './tasks';
 import { shareRoutes } from './shares';
 import { templateRoutes } from './templates';
+import { templateShareRoutes } from './template-shares';
 import { eventRoutes } from './events';
+import { adminRoutes } from './admin';
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(authRoutes);
@@ -12,5 +14,7 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(taskRoutes);
   await app.register(shareRoutes);
   await app.register(templateRoutes);
+  await app.register(templateShareRoutes);
   await app.register(eventRoutes);
+  await app.register(adminRoutes);
 }

@@ -1,10 +1,14 @@
 import { api } from './client';
-import type { TaskTemplate, TemplateTask, Task } from '../types';
+import type { TemplateSummary, TaskTemplate, TemplateTask, TemplateShare, Task, Permission } from '../types';
 
 export const templatesApi = {
-  getAll: () => api.get<{ templates: TaskTemplate[] }>('/templates'),
+  getAll: () =>
+    api.get<{ owned: TemplateSummary[]; shared: TemplateSummary[] }>('/templates'),
 
-  getById: (id: string) => api.get<{ template: TaskTemplate }>(`/templates/${id}`),
+  getById: (id: string) =>
+    api.get<{ template: TaskTemplate; isOwner: boolean; permission: Permission | null }>(
+      `/templates/${id}`,
+    ),
 
   create: (name: string) => api.post<{ template: TaskTemplate }>('/templates', { name }),
 
@@ -30,4 +34,23 @@ export const templatesApi = {
 
   apply: (templateId: string, taskListId: string) =>
     api.post<{ tasks: Task[] }>(`/templates/${templateId}/apply`, { taskListId }),
+
+  // Sharing
+  getShares: (templateId: string) =>
+    api.get<{ shares: TemplateShare[] }>(`/templates/${templateId}/shares`),
+
+  createShare: (templateId: string, email: string, permission: Permission) =>
+    api.post<{ share: TemplateShare }>(`/templates/${templateId}/shares`, {
+      email,
+      permission,
+    }),
+
+  updateShare: (templateId: string, shareId: string, permission: Permission) =>
+    api.patch<{ share: TemplateShare }>(
+      `/templates/${templateId}/shares/${shareId}`,
+      { permission },
+    ),
+
+  deleteShare: (templateId: string, shareId: string) =>
+    api.delete<void>(`/templates/${templateId}/shares/${shareId}`),
 };

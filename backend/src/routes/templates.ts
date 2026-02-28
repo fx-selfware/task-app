@@ -3,7 +3,7 @@ import { requireAuth } from '../middleware/requireAuth';
 import {
   getTemplates,
   createTemplate,
-  getTemplateByOwner,
+  getTemplateWithAccess,
   updateTemplate,
   deleteTemplate,
   createTemplateTask,
@@ -14,8 +14,8 @@ import {
 
 export async function templateRoutes(app: FastifyInstance) {
   app.get('/templates', { preHandler: requireAuth }, async (request, reply) => {
-    const templates = await getTemplates(app.prisma, request.user.userId);
-    return reply.send({ templates });
+    const { owned, shared } = await getTemplates(app.prisma, request.user.userId);
+    return reply.send({ owned, shared });
   });
 
   app.post('/templates', { preHandler: requireAuth }, async (request, reply) => {
@@ -34,8 +34,12 @@ export async function templateRoutes(app: FastifyInstance) {
   app.get('/templates/:id', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
     try {
-      const template = await getTemplateByOwner(app.prisma, id, request.user.userId);
-      return reply.send({ template });
+      const { template, isOwner, permission } = await getTemplateWithAccess(
+        app.prisma,
+        id,
+        request.user.userId,
+      );
+      return reply.send({ template, isOwner, permission });
     } catch (err: unknown) {
       const e = err as Error & { statusCode?: number };
       return reply.status(e.statusCode ?? 500).send({ error: e.message });

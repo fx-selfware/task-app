@@ -5,6 +5,7 @@ import { config } from '../config';
 export interface JwtPayload {
   userId: string;
   email: string;
+  role: string;
 }
 
 declare module 'fastify' {

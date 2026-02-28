@@ -153,9 +153,9 @@ Then(
 Then(
   'there is {int} template named {string}',
   async function (this: AppWorld, count: number, name: string) {
-    const templates = this.response.body?.templates ?? [];
-    expect(templates).to.have.length(count);
-    if (count > 0) expect(templates[0].name).to.equal(name);
+    const owned = this.response.body?.owned ?? [];
+    expect(owned).to.have.length(count);
+    if (count > 0) expect(owned[0].name).to.equal(name);
   },
 );
 

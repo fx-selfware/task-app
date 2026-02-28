@@ -15,11 +15,30 @@ export interface UpdateTemplateTaskInput {
 }
 
 export async function getTemplates(prisma: PrismaClient, userId: string) {
-  return prisma.taskTemplate.findMany({
+  const owned = await prisma.taskTemplate.findMany({
     where: { ownerId: userId },
     include: { _count: { select: { tasks: true } } },
     orderBy: { createdAt: 'asc' },
   });
+
+  const shared = await prisma.taskTemplate.findMany({
+    where: { shares: { some: { userId } } },
+    include: {
+      _count: { select: { tasks: true } },
+      shares: { where: { userId }, select: { permission: true } },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  return {
+    owned: owned.map((t) => ({ ...t, role: 'owner' as const })),
+    shared: shared.map((t) => ({
+      ...t,
+      role: 'shared' as const,
+      permission: t.shares[0]?.permission,
+      shares: undefined,
+    })),
+  };
 }
 
 export async function createTemplate(
@@ -30,14 +49,20 @@ export async function createTemplate(
   return prisma.taskTemplate.create({ data: { name: input.name, ownerId: userId } });
 }
 
-export async function getTemplateByOwner(
+export async function getTemplateWithAccess(
   prisma: PrismaClient,
   templateId: string,
   userId: string,
 ) {
   const template = await prisma.taskTemplate.findFirst({
-    where: { id: templateId, ownerId: userId },
-    include: { tasks: { orderBy: { order: 'asc' } } },
+    where: {
+      id: templateId,
+      OR: [{ ownerId: userId }, { shares: { some: { userId } } }],
+    },
+    include: {
+      tasks: { orderBy: { order: 'asc' } },
+      shares: { where: { userId }, select: { permission: true } },
+    },
   });
 
   if (!template) {
@@ -46,6 +71,27 @@ export async function getTemplateByOwner(
     throw err;
   }
 
+  const isOwner = template.ownerId === userId;
+  const permission = isOwner ? ('WRITE' as const) : (template.shares[0]?.permission ?? null);
+
+  return { template: { ...template, shares: undefined }, isOwner, permission };
+}
+
+async function requireWriteAccess(prisma: PrismaClient, templateId: string, userId: string) {
+  const template = await prisma.taskTemplate.findFirst({
+    where: {
+      id: templateId,
+      OR: [
+        { ownerId: userId },
+        { shares: { some: { userId, permission: 'WRITE' } } },
+      ],
+    },
+  });
+  if (!template) {
+    const err = new Error('Not found') as Error & { statusCode: number };
+    err.statusCode = 404;
+    throw err;
+  }
   return template;
 }
 
@@ -55,15 +101,7 @@ export async function updateTemplate(
   userId: string,
   name: string,
 ) {
-  const template = await prisma.taskTemplate.findFirst({
-    where: { id: templateId, ownerId: userId },
-  });
-  if (!template) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
-
+  await requireWriteAccess(prisma, templateId, userId);
   return prisma.taskTemplate.update({ where: { id: templateId }, data: { name } });
 }
 
@@ -90,14 +128,7 @@ export async function createTemplateTask(
   userId: string,
   input: CreateTemplateTaskInput,
 ) {
-  const template = await prisma.taskTemplate.findFirst({
-    where: { id: templateId, ownerId: userId },
-  });
-  if (!template) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  await requireWriteAccess(prisma, templateId, userId);
 
   const maxOrder = await prisma.templateTask.aggregate({
     where: { templateId },
@@ -117,14 +148,7 @@ export async function updateTemplateTask(
   userId: string,
   input: UpdateTemplateTaskInput,
 ) {
-  const template = await prisma.taskTemplate.findFirst({
-    where: { id: templateId, ownerId: userId },
-  });
-  if (!template) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  await requireWriteAccess(prisma, templateId, userId);
 
   const task = await prisma.templateTask.findFirst({ where: { id: taskId, templateId } });
   if (!task) {
@@ -148,14 +172,7 @@ export async function deleteTemplateTask(
   taskId: string,
   userId: string,
 ) {
-  const template = await prisma.taskTemplate.findFirst({
-    where: { id: templateId, ownerId: userId },
-  });
-  if (!template) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  await requireWriteAccess(prisma, templateId, userId);
 
   const task = await prisma.templateTask.findFirst({ where: { id: taskId, templateId } });
   if (!task) {
@@ -170,12 +187,18 @@ export async function deleteTemplateTask(
 export async function applyTemplate(
   prisma: PrismaClient,
   templateId: string,
-  templateOwnerId: string,
+  _templateOwnerId: string,
   taskListId: string,
   requestingUserId: string,
 ) {
   const template = await prisma.taskTemplate.findFirst({
-    where: { id: templateId, ownerId: templateOwnerId },
+    where: {
+      id: templateId,
+      OR: [
+        { ownerId: requestingUserId },
+        { shares: { some: { userId: requestingUserId } } },
+      ],
+    },
     include: { tasks: { orderBy: { order: 'asc' } } },
   });
   if (!template) {

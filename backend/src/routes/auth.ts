@@ -25,7 +25,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     try {
       const user = await registerUser(app.prisma, { email, password, name });
-      const token = signToken(user.id, user.email);
+      const token = signToken(user.id, user.email, user.role);
       reply.setCookie('token', token, COOKIE_OPTS);
       return reply.status(201).send({ user });
     } catch (err: unknown) {
@@ -43,7 +43,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     try {
       const user = await loginUser(app.prisma, { email, password });
-      const token = signToken(user.id, user.email);
+      const token = signToken(user.id, user.email, user.role);
       reply.setCookie('token', token, COOKIE_OPTS);
       return reply.send({ user });
     } catch (err: unknown) {
@@ -60,7 +60,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.get('/auth/me', { preHandler: requireAuth }, async (request, reply) => {
     const user = await app.prisma.user.findUnique({
       where: { id: request.user.userId },
-      select: { id: true, email: true, name: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
     if (!user) return reply.status(404).send({ error: 'Not found' });
     return reply.send({ user });

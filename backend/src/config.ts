@@ -9,6 +9,7 @@ const envSchema = z.object({
     .transform((v) => v === 'true')
     .default('false'),
   PORT: z.string().transform(Number).default('3001'),
+  ADMIN_EMAILS: z.string().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -18,3 +19,13 @@ if (!parsed.success) {
 }
 
 export const config = parsed.data;
+
+export function getAdminEmails(): Set<string> {
+  const raw = process.env.ADMIN_EMAILS ?? config.ADMIN_EMAILS;
+  return new Set(
+    raw
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}

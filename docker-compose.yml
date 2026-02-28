@@ -26,6 +26,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-this-to-a-long-random-secret}
       NODE_ENV: ${NODE_ENV:-production}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       PORT: 3001
     depends_on:
       db:

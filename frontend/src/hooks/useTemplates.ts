@@ -1,17 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { templatesApi } from '../api/templates';
+import type { Permission } from '../types';
 
 export function useTemplates() {
   return useQuery({
     queryKey: ['templates'],
-    queryFn: () => templatesApi.getAll().then((r) => r.templates),
+    queryFn: () => templatesApi.getAll(),
   });
 }
 
 export function useTemplate(id: string) {
   return useQuery({
     queryKey: ['templates', id],
-    queryFn: () => templatesApi.getById(id).then((r) => r.template),
+    queryFn: () => templatesApi.getById(id),
     enabled: !!id,
   });
 }
@@ -97,6 +98,49 @@ export function useApplyTemplate() {
     }) => templatesApi.apply(templateId, taskListId),
     onSuccess: (_data, { taskListId }) => {
       queryClient.invalidateQueries({ queryKey: ['task-lists', taskListId] });
+    },
+  });
+}
+
+// Sharing hooks
+export function useTemplateShares(templateId: string) {
+  return useQuery({
+    queryKey: ['template-shares', templateId],
+    queryFn: () => templatesApi.getShares(templateId).then((r) => r.shares),
+    enabled: !!templateId,
+  });
+}
+
+export function useCreateTemplateShare(templateId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ email, permission }: { email: string; permission: Permission }) =>
+      templatesApi.createShare(templateId, email, permission),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['template-shares', templateId] });
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
+    },
+  });
+}
+
+export function useUpdateTemplateShare(templateId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ shareId, permission }: { shareId: string; permission: Permission }) =>
+      templatesApi.updateShare(templateId, shareId, permission),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['template-shares', templateId] });
+    },
+  });
+}
+
+export function useDeleteTemplateShare(templateId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (shareId: string) => templatesApi.deleteShare(templateId, shareId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['template-shares', templateId] });
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
     },
   });
 }

@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
-import { config } from '../config';
+import { config, getAdminEmails } from '../config';
 
 export interface RegisterInput {
   email: string;
@@ -23,13 +23,15 @@ export async function registerUser(prisma: PrismaClient, input: RegisterInput) {
   }
 
   const passwordHash = await bcrypt.hash(input.password, 12);
+  const role = getAdminEmails().has(input.email.toLowerCase()) ? 'ADMIN' : 'USER';
   const user = await prisma.user.create({
     data: {
       email: input.email,
       passwordHash,
       name: input.name,
+      role,
     },
-    select: { id: true, email: true, name: true, createdAt: true },
+    select: { id: true, email: true, name: true, role: true, createdAt: true },
   });
 
   return user;
@@ -50,9 +52,18 @@ export async function loginUser(prisma: PrismaClient, input: LoginInput) {
     throw err;
   }
 
-  return { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt };
+  // Promote or demote role based on current ADMIN_EMAILS config
+  const expectedRole = getAdminEmails().has(user.email.toLowerCase()) ? 'ADMIN' : 'USER';
+  if (user.role !== expectedRole) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { role: expectedRole },
+    });
+  }
+
+  return { id: user.id, email: user.email, name: user.name, role: expectedRole, createdAt: user.createdAt };
 }
 
-export function signToken(userId: string, email: string): string {
-  return jwt.sign({ userId, email }, config.JWT_SECRET, { expiresIn: '7d' });
+export function signToken(userId: string, email: string, role: string): string {
+  return jwt.sign({ userId, email, role }, config.JWT_SECRET, { expiresIn: '7d' });
 }
