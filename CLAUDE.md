@@ -137,4 +137,4 @@ A host-level firewall restricts outbound network access. Docker containers route
 
 ### Deployment
 
-Production runs on a single Azure VM (`Standard_B1s`) at `task-app-fx.westus2.cloudapp.azure.com`. Pushing to `main` triggers GitHub Actions: backend BDD + E2E tests, then build and push images to GHCR, then SSH deploy to the VM (pull only, no build). GitHub secrets required: `VM_HOST`, `VM_USER`, `VM_SSH_KEY`.
+Production runs on a single Azure VM (`Standard_B1s`) at `task-app-fx.westus2.cloudapp.azure.com`. Pushing to `main` triggers a 3-job GitHub Actions pipeline: (1) test — backend BDD + E2E in parallel, (2) build — backend and frontend images built in parallel via matrix and pushed to GHCR (skipped if no deploy-worthy files changed), (3) deploy — SSH to VM, pull images, restart containers. GitHub secrets required: `VM_HOST`, `VM_USER`, `VM_SSH_KEY`.

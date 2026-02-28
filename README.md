@@ -68,8 +68,9 @@ curl https://<your-domain>/api/auth/me
 
 Every push to `main` triggers the GitHub Actions workflow:
 
-1. **Test** — runs backend API tests in Docker (`docker-compose.test.yml`), starts the full stack, runs Playwright E2E tests
-2. **Deploy** — builds images on GHA and pushes to GHCR, then SSHes into the VM, pulls images, and restarts containers (migrations run on startup)
+1. **Test** — runs backend BDD tests and E2E stack build in parallel, then runs Playwright E2E tests
+2. **Build** — builds backend and frontend images in parallel (matrix strategy) and pushes to GHCR; skipped if no deploy-worthy files changed
+3. **Deploy** — SSHes into the VM, pulls images, and restarts containers (migrations run on startup)
 
 ### GitHub Secrets required
 
