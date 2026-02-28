@@ -123,6 +123,10 @@ BASE_URL=http://localhost:8099 npm --prefix e2e run test:ac
 
 Required at runtime: `DATABASE_URL`, `JWT_SECRET`, `COOKIE_SECURE` (`false` in dev/test, `true` in prod), `DOMAIN` (prod only — FQDN for Caddy's TLS certificate). See `.env.example`.
 
+### Network / firewall
+
+A host-level firewall restricts outbound network access. Docker containers route through the host network and are subject to the same firewall rules. If a Docker build or container needs to reach an external domain (e.g. `deb.debian.org` for `apt-get`), ensure it is allowed at the host firewall level.
+
 ### Deployment
 
 Production runs on a single Azure VM (`Standard_B1s`) at `task-app-fx.westus2.cloudapp.azure.com`. Pushing to `main` triggers GitHub Actions: backend BDD + E2E tests, then SSH deploy to the VM. GitHub secrets required: `VM_HOST`, `VM_USER`, `VM_SSH_KEY`.

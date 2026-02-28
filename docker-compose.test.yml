@@ -9,6 +9,11 @@
 #   docker compose -f docker-compose.yml -f docker-compose.test.yml down
 
 services:
+  # Use anonymous volume instead of named pgdata (works in DinD where named volumes fail)
+  db:
+    volumes:
+      - /var/lib/postgresql/data
+
   # Overrides for the E2E app stack
   backend:
     environment:
