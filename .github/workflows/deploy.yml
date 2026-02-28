@@ -92,6 +92,7 @@ jobs:
           push: true
           tags: ghcr.io/fanxia0404/task-app-frontend:latest
           build-args: COMMIT_SHA=${{ github.sha }}
+          build-contexts: gitdir=./.git
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
