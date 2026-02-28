@@ -13,35 +13,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run backend tests
-        run: docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend-test
-
-      - name: Start stack for E2E
-        run: docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
-
-      - name: Install Playwright
-        run: npm --prefix e2e install && npx --prefix e2e playwright install --with-deps chromium
-
-      - name: Run E2E tests
-        run: npm --prefix e2e test
-        env:
-          BASE_URL: http://localhost:8099
-
-      - name: Stop stack
-        if: always()
-        run: docker compose -f docker-compose.yml -f docker-compose.test.yml down -v
-
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      packages: write
+    outputs:
+      should-deploy: ${{ steps.filter.outputs.app }}
 
     steps:
       - uses: actions/checkout@v4
@@ -60,44 +33,79 @@ jobs:
               - 'docker-compose.prod.yml'
               - '.github/workflows/**'
 
+      - name: Run backend tests & build E2E stack
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend-test &
+          BDD_PID=$!
+          docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
+          wait $BDD_PID
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('e2e/package-lock.json') }}
+
+      - name: Install Playwright
+        run: npm --prefix e2e install && npx --prefix e2e playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npm --prefix e2e test
+        env:
+          BASE_URL: http://localhost:8099
+
+      - name: Stop stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.test.yml down -v
+
+  build:
+    needs: test
+    if: github.ref == 'refs/heads/main' && needs.test.outputs.should-deploy == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [backend, frontend]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
-        if: steps.filter.outputs.app == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
-        if: steps.filter.outputs.app == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push backend
-        if: steps.filter.outputs.app == 'true'
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          context: ./${{ matrix.service }}
           target: production
           push: true
-          tags: ghcr.io/fanxia0404/task-app-backend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ghcr.io/fanxia0404/task-app-${{ matrix.service }}:latest
+          build-args: ${{ matrix.service == 'frontend' && format('COMMIT_SHA={0}', github.sha) || '' }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
-      - name: Build and push frontend
-        if: steps.filter.outputs.app == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          target: production
-          push: true
-          tags: ghcr.io/fanxia0404/task-app-frontend:latest
-          build-args: COMMIT_SHA=${{ github.sha }}
-          build-contexts: gitdir=./.git
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+  deploy:
+    needs: [test, build]
+    if: github.ref == 'refs/heads/main' && needs.test.outputs.should-deploy == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
+    steps:
       - name: Deploy to Azure VM
-        if: steps.filter.outputs.app == 'true'
         uses: appleboy/ssh-action@v1
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}

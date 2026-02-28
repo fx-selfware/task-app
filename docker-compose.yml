@@ -43,8 +43,6 @@ services:
     build:
       context: ./frontend
       target: production
-      additional_contexts:
-        gitdir: ./.git
       args:
         PROXY_CA_B64: ${PROXY_CA_CERT_B64:-}
         PROXY_HOST: ${DOCKER_PROXY_HOST:-}

@@ -108,7 +108,7 @@ grep -A1 "@ac" e2e/features/**/*.feature
 To run them against the full stack:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
+COMMIT_SHA=$(git rev-parse HEAD) docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
 npm --prefix e2e install && BASE_URL=http://localhost:8099 npm --prefix e2e run test:ac
 docker compose -f docker-compose.yml -f docker-compose.test.yml down
 ```
@@ -120,7 +120,7 @@ docker compose -f docker-compose.yml -f docker-compose.test.yml down
 docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend-test
 
 # All E2E tests (clean DB, port 8099)
-docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
+COMMIT_SHA=$(git rev-parse HEAD) docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
 npm --prefix e2e install && BASE_URL=http://localhost:8099 npm --prefix e2e test
 docker compose -f docker-compose.yml -f docker-compose.test.yml down
 

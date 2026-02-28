@@ -39,7 +39,7 @@ npm run build    # TypeScript check + Vite build (from: frontend/)
 
 ```bash
 # Clean-DB E2E run (production builds, port 8099):
-docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
+COMMIT_SHA=$(git rev-parse HEAD) docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
 npm --prefix e2e install && BASE_URL=http://localhost:8099 npm --prefix e2e test
 docker compose -f docker-compose.yml -f docker-compose.test.yml down
 
