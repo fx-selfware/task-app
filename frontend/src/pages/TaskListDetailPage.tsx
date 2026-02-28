@@ -266,6 +266,13 @@ export function TaskListDetailPage() {
             label="Title"
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                (e.target as HTMLInputElement).form?.requestSubmit();
+              }
+            }}
+            enterKeyHint="done"
             required
             autoFocus
           />
@@ -302,6 +309,13 @@ export function TaskListDetailPage() {
             label="Title"
             value={editTaskTitle}
             onChange={(e) => setEditTaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                (e.target as HTMLInputElement).form?.requestSubmit();
+              }
+            }}
+            enterKeyHint="done"
             required
             autoFocus
           />

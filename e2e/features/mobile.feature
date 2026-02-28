@@ -19,6 +19,13 @@ Feature: Mobile layout
     When I drag "Beta" above "Alpha"
     Then "Beta" appears before "Alpha" in the task list
 
+  Scenario: Pressing Enter on the task title input creates the task
+    Given I have a task list named "Quick Add"
+    When I click the hamburger button
+    And I open the task list "Quick Add"
+    And I press "+ Task" and type "Buy groceries" then press Enter
+    Then "Buy groceries" is visible in the task list
+
 @touch-only
 Scenario: The delete button is always visible on a touch device without hovering
   Given I have a task list with tasks "Alpha" and "Beta" ready to view
