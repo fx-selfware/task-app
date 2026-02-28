@@ -1,12 +1,9 @@
 import { PrismaClient, Permission } from '@prisma/client';
+import { httpError } from '../utils/httpError';
 
 export async function getShares(prisma: PrismaClient, taskListId: string, userId: string) {
   const list = await prisma.taskList.findUnique({ where: { id: taskListId } });
-  if (!list || list.ownerId !== userId) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!list || list.ownerId !== userId) httpError(404, 'Not found');
 
   return prisma.taskListShare.findMany({
     where: { taskListId },
@@ -22,33 +19,17 @@ export async function createShare(
   permission: Permission,
 ) {
   const list = await prisma.taskList.findUnique({ where: { id: taskListId } });
-  if (!list || list.ownerId !== ownerId) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!list || list.ownerId !== ownerId) httpError(404, 'Not found');
 
   const invitee = await prisma.user.findUnique({ where: { email } });
-  if (!invitee) {
-    const err = new Error('User not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!invitee) httpError(404, 'User not found');
 
-  if (invitee.id === ownerId) {
-    const err = new Error('Cannot share with yourself') as Error & { statusCode: number };
-    err.statusCode = 400;
-    throw err;
-  }
+  if (invitee.id === ownerId) httpError(400, 'Cannot share with yourself');
 
   const existing = await prisma.taskListShare.findUnique({
     where: { taskListId_userId: { taskListId, userId: invitee.id } },
   });
-  if (existing) {
-    const err = new Error('Already shared') as Error & { statusCode: number };
-    err.statusCode = 409;
-    throw err;
-  }
+  if (existing) httpError(409, 'Already shared');
 
   return prisma.taskListShare.create({
     data: { taskListId, userId: invitee.id, permission },
@@ -64,18 +45,10 @@ export async function updateShare(
   permission: Permission,
 ) {
   const list = await prisma.taskList.findUnique({ where: { id: taskListId } });
-  if (!list || list.ownerId !== ownerId) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!list || list.ownerId !== ownerId) httpError(404, 'Not found');
 
   const share = await prisma.taskListShare.findFirst({ where: { id: shareId, taskListId } });
-  if (!share) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!share) httpError(404, 'Not found');
 
   return prisma.taskListShare.update({ where: { id: shareId }, data: { permission } });
 }
@@ -87,18 +60,10 @@ export async function deleteShare(
   ownerId: string,
 ) {
   const list = await prisma.taskList.findUnique({ where: { id: taskListId } });
-  if (!list || list.ownerId !== ownerId) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!list || list.ownerId !== ownerId) httpError(404, 'Not found');
 
   const share = await prisma.taskListShare.findFirst({ where: { id: shareId, taskListId } });
-  if (!share) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!share) httpError(404, 'Not found');
 
   await prisma.taskListShare.delete({ where: { id: shareId } });
 }

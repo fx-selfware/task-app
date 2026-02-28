@@ -23,15 +23,10 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'email, password, and name are required' });
     }
 
-    try {
-      const user = await registerUser(app.prisma, { email, password, name });
-      const token = signToken(user.id, user.email, user.role);
-      reply.setCookie('token', token, COOKIE_OPTS);
-      return reply.status(201).send({ user });
-    } catch (err: unknown) {
-      const e = err as Error & { statusCode?: number };
-      return reply.status(e.statusCode ?? 500).send({ error: e.message });
-    }
+    const user = await registerUser(app.prisma, { email, password, name });
+    const token = signToken(user.id, user.email, user.role);
+    reply.setCookie('token', token, COOKIE_OPTS);
+    return reply.status(201).send({ user });
   });
 
   app.post('/auth/login', async (request, reply) => {
@@ -41,15 +36,10 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'email and password are required' });
     }
 
-    try {
-      const user = await loginUser(app.prisma, { email, password });
-      const token = signToken(user.id, user.email, user.role);
-      reply.setCookie('token', token, COOKIE_OPTS);
-      return reply.send({ user });
-    } catch (err: unknown) {
-      const e = err as Error & { statusCode?: number };
-      return reply.status(e.statusCode ?? 500).send({ error: e.message });
-    }
+    const user = await loginUser(app.prisma, { email, password });
+    const token = signToken(user.id, user.email, user.role);
+    reply.setCookie('token', token, COOKIE_OPTS);
+    return reply.send({ user });
   });
 
   app.post('/auth/logout', async (_request, reply) => {

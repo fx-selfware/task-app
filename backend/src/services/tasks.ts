@@ -1,4 +1,5 @@
 import { PrismaClient, TaskStatus } from '@prisma/client';
+import { httpError } from '../utils/httpError';
 
 export interface CreateTaskInput {
   title: string;
@@ -39,11 +40,7 @@ export async function updateTask(
   input: UpdateTaskInput,
 ) {
   const task = await prisma.task.findFirst({ where: { id: taskId, taskListId } });
-  if (!task) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!task) httpError(404, 'Not found');
 
   return prisma.task.update({
     where: { id: taskId },
@@ -57,11 +54,7 @@ export async function updateTask(
 
 export async function deleteTask(prisma: PrismaClient, taskListId: string, taskId: string) {
   const task = await prisma.task.findFirst({ where: { id: taskId, taskListId } });
-  if (!task) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!task) httpError(404, 'Not found');
 
   await prisma.task.delete({ where: { id: taskId } });
 }
@@ -80,11 +73,7 @@ export async function reorderTasks(
   const existingIds = new Set(tasks.map((t) => t.id));
 
   for (const id of orderedIds) {
-    if (!existingIds.has(id)) {
-      const err = new Error('Task not found in list') as Error & { statusCode: number };
-      err.statusCode = 400;
-      throw err;
-    }
+    if (!existingIds.has(id)) httpError(400, 'Task not found in list');
   }
 
   await prisma.$transaction(

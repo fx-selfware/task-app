@@ -10,12 +10,7 @@ export async function eventRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
 
-      try {
-        await getTaskListWithAccess(app.prisma, id, request.user.userId);
-      } catch (err: unknown) {
-        const e = err as Error & { statusCode?: number };
-        return reply.status(e.statusCode ?? 500).send({ error: e.message });
-      }
+      await getTaskListWithAccess(app.prisma, id, request.user.userId);
 
       await reply.hijack();
 
@@ -27,21 +22,23 @@ export async function eventRoutes(app: FastifyInstance) {
       });
       reply.raw.write(':connected\n\n');
 
-      const unsubscribe = subscribe(id, () => {
-        try {
-          reply.raw.write('data: update\n\n');
-        } catch {
-          // Client already disconnected
-        }
-      });
-
       const heartbeat = setInterval(() => {
         try {
           reply.raw.write(':heartbeat\n\n');
         } catch {
-          // Client already disconnected
+          clearInterval(heartbeat);
+          unsubscribe();
         }
       }, 30_000);
+
+      const unsubscribe = subscribe(id, () => {
+        try {
+          reply.raw.write('data: update\n\n');
+        } catch {
+          clearInterval(heartbeat);
+          unsubscribe();
+        }
+      });
 
       request.raw.on('close', () => {
         clearInterval(heartbeat);

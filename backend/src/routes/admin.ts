@@ -20,13 +20,8 @@ export async function adminRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: 'newPassword must be at least 8 characters' });
       }
 
-      try {
-        await resetUserPassword(app.prisma, id, newPassword);
-        return reply.send({ ok: true });
-      } catch (err: unknown) {
-        const e = err as Error & { statusCode?: number };
-        return reply.status(e.statusCode ?? 500).send({ error: e.message });
-      }
+      await resetUserPassword(app.prisma, id, newPassword);
+      return reply.send({ ok: true });
     },
   );
 }

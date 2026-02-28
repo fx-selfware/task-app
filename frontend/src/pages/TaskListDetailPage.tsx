@@ -88,9 +88,7 @@ export function TaskListDetailPage() {
     ? localOrder.map((tid) => tasks.find((t) => t.id === tid)!).filter(Boolean)
     : tasks.filter((t) => t.status === 'TODO');
 
-  const doneTasks = tasks
-    .filter((t) => t.status === 'DONE')
-    .sort((a, b) => a.order - b.order);
+  const doneTasks = tasks.filter((t) => t.status === 'DONE');
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;

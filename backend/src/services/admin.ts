@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
+import { httpError } from '../utils/httpError';
 
 export async function listUsers(prisma: PrismaClient) {
   return prisma.user.findMany({
@@ -16,11 +17,7 @@ export async function listUsers(prisma: PrismaClient) {
 
 export async function resetUserPassword(prisma: PrismaClient, userId: string, newPassword: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
-    const err = new Error('User not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!user) httpError(404, 'User not found');
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({

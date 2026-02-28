@@ -20,12 +20,16 @@ if (!parsed.success) {
 
 export const config = parsed.data;
 
+let _adminEmails: Set<string> | null = null;
+
 export function getAdminEmails(): Set<string> {
-  const raw = process.env.ADMIN_EMAILS ?? config.ADMIN_EMAILS;
-  return new Set(
-    raw
-      .split(',')
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean),
-  );
+  if (!_adminEmails) {
+    _adminEmails = new Set(
+      config.ADMIN_EMAILS
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean),
+    );
+  }
+  return _adminEmails;
 }

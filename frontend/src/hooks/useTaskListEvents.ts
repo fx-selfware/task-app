@@ -7,11 +7,15 @@ export function useTaskListEvents(listId: string) {
   useEffect(() => {
     if (!listId) return;
 
+    let isFirstOpen = true;
     const eventSource = new EventSource(`/api/task-lists/${listId}/events`);
 
     eventSource.onopen = () => {
-      // Refetch to pick up any changes that occurred before the SSE connection
-      // was established. Also handles reconnections after a connection drop.
+      if (isFirstOpen) {
+        isFirstOpen = false;
+        return; // Skip invalidation on first open; useQuery already fetches it
+      }
+      // Refetch on reconnection after a connection drop
       queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
     };
 

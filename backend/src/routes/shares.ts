@@ -10,13 +10,8 @@ export async function shareRoutes(app: FastifyInstance) {
     { preHandler: requireAuth },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      try {
-        const shares = await getShares(app.prisma, id, request.user.userId);
-        return reply.send({ shares });
-      } catch (err: unknown) {
-        const e = err as Error & { statusCode?: number };
-        return reply.status(e.statusCode ?? 500).send({ error: e.message });
-      }
+      const shares = await getShares(app.prisma, id, request.user.userId);
+      return reply.send({ shares });
     },
   );
 
@@ -33,14 +28,9 @@ export async function shareRoutes(app: FastifyInstance) {
       if (!email) return reply.status(400).send({ error: 'email is required' });
       const perm: Permission = permission === 'WRITE' ? 'WRITE' : 'READ';
 
-      try {
-        const share = await createShare(app.prisma, id, request.user.userId, email, perm);
-        publish(id);
-        return reply.status(201).send({ share });
-      } catch (err: unknown) {
-        const e = err as Error & { statusCode?: number };
-        return reply.status(e.statusCode ?? 500).send({ error: e.message });
-      }
+      const share = await createShare(app.prisma, id, request.user.userId, email, perm);
+      publish(id);
+      return reply.status(201).send({ share });
     },
   );
 
@@ -53,20 +43,15 @@ export async function shareRoutes(app: FastifyInstance) {
 
       if (!permission) return reply.status(400).send({ error: 'permission is required' });
 
-      try {
-        const share = await updateShare(
-          app.prisma,
-          id,
-          sid,
-          request.user.userId,
-          permission,
-        );
-        publish(id);
-        return reply.send({ share });
-      } catch (err: unknown) {
-        const e = err as Error & { statusCode?: number };
-        return reply.status(e.statusCode ?? 500).send({ error: e.message });
-      }
+      const share = await updateShare(
+        app.prisma,
+        id,
+        sid,
+        request.user.userId,
+        permission,
+      );
+      publish(id);
+      return reply.send({ share });
     },
   );
 
@@ -76,14 +61,9 @@ export async function shareRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { id, sid } = request.params as { id: string; sid: string };
 
-      try {
-        await deleteShare(app.prisma, id, sid, request.user.userId);
-        publish(id);
-        return reply.status(204).send();
-      } catch (err: unknown) {
-        const e = err as Error & { statusCode?: number };
-        return reply.status(e.statusCode ?? 500).send({ error: e.message });
-      }
+      await deleteShare(app.prisma, id, sid, request.user.userId);
+      publish(id);
+      return reply.status(204).send();
     },
   );
 }

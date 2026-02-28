@@ -22,28 +22,18 @@ export async function templateRoutes(app: FastifyInstance) {
     const { name } = request.body as { name: string };
     if (!name) return reply.status(400).send({ error: 'name is required' });
 
-    try {
-      const template = await createTemplate(app.prisma, request.user.userId, { name });
-      return reply.status(201).send({ template });
-    } catch (err: unknown) {
-      const e = err as Error & { statusCode?: number };
-      return reply.status(e.statusCode ?? 500).send({ error: e.message });
-    }
+    const template = await createTemplate(app.prisma, request.user.userId, { name });
+    return reply.status(201).send({ template });
   });
 
   app.get('/templates/:id', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    try {
-      const { template, isOwner, permission } = await getTemplateWithAccess(
-        app.prisma,
-        id,
-        request.user.userId,
-      );
-      return reply.send({ template, isOwner, permission });
-    } catch (err: unknown) {
-      const e = err as Error & { statusCode?: number };
-      return reply.status(e.statusCode ?? 500).send({ error: e.message });
-    }
+    const { template, isOwner, permission } = await getTemplateWithAccess(
+      app.prisma,
+      id,
+      request.user.userId,
+    );
+    return reply.send({ template, isOwner, permission });
   });
 
   app.patch('/templates/:id', { preHandler: requireAuth }, async (request, reply) => {
@@ -51,24 +41,14 @@ export async function templateRoutes(app: FastifyInstance) {
     const { name } = request.body as { name: string };
     if (!name) return reply.status(400).send({ error: 'name is required' });
 
-    try {
-      const template = await updateTemplate(app.prisma, id, request.user.userId, name);
-      return reply.send({ template });
-    } catch (err: unknown) {
-      const e = err as Error & { statusCode?: number };
-      return reply.status(e.statusCode ?? 500).send({ error: e.message });
-    }
+    const template = await updateTemplate(app.prisma, id, request.user.userId, name);
+    return reply.send({ template });
   });
 
   app.delete('/templates/:id', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    try {
-      await deleteTemplate(app.prisma, id, request.user.userId);
-      return reply.status(204).send();
-    } catch (err: unknown) {
-      const e = err as Error & { statusCode?: number };
-      return reply.status(e.statusCode ?? 500).send({ error: e.message });
-    }
+    await deleteTemplate(app.prisma, id, request.user.userId);
+    return reply.status(204).send();
   });
 
   // Template tasks
@@ -83,16 +63,11 @@ export async function templateRoutes(app: FastifyInstance) {
       };
       if (!title) return reply.status(400).send({ error: 'title is required' });
 
-      try {
-        const task = await createTemplateTask(app.prisma, id, request.user.userId, {
-          title,
-          description,
-        });
-        return reply.status(201).send({ task });
-      } catch (err: unknown) {
-        const e = err as Error & { statusCode?: number };
-        return reply.status(e.statusCode ?? 500).send({ error: e.message });
-      }
+      const task = await createTemplateTask(app.prisma, id, request.user.userId, {
+        title,
+        description,
+      });
+      return reply.status(201).send({ task });
     },
   );
 
@@ -103,19 +78,14 @@ export async function templateRoutes(app: FastifyInstance) {
       const { id, tid } = request.params as { id: string; tid: string };
       const body = request.body as { title?: string; description?: string };
 
-      try {
-        const task = await updateTemplateTask(
-          app.prisma,
-          id,
-          tid,
-          request.user.userId,
-          body,
-        );
-        return reply.send({ task });
-      } catch (err: unknown) {
-        const e = err as Error & { statusCode?: number };
-        return reply.status(e.statusCode ?? 500).send({ error: e.message });
-      }
+      const task = await updateTemplateTask(
+        app.prisma,
+        id,
+        tid,
+        request.user.userId,
+        body,
+      );
+      return reply.send({ task });
     },
   );
 
@@ -125,13 +95,8 @@ export async function templateRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { id, tid } = request.params as { id: string; tid: string };
 
-      try {
-        await deleteTemplateTask(app.prisma, id, tid, request.user.userId);
-        return reply.status(204).send();
-      } catch (err: unknown) {
-        const e = err as Error & { statusCode?: number };
-        return reply.status(e.statusCode ?? 500).send({ error: e.message });
-      }
+      await deleteTemplateTask(app.prisma, id, tid, request.user.userId);
+      return reply.status(204).send();
     },
   );
 
@@ -144,19 +109,13 @@ export async function templateRoutes(app: FastifyInstance) {
 
       if (!taskListId) return reply.status(400).send({ error: 'taskListId is required' });
 
-      try {
-        const tasks = await applyTemplate(
-          app.prisma,
-          id,
-          request.user.userId,
-          taskListId,
-          request.user.userId,
-        );
-        return reply.status(201).send({ tasks });
-      } catch (err: unknown) {
-        const e = err as Error & { statusCode?: number };
-        return reply.status(e.statusCode ?? 500).send({ error: e.message });
-      }
+      const tasks = await applyTemplate(
+        app.prisma,
+        id,
+        taskListId,
+        request.user.userId,
+      );
+      return reply.status(201).send({ tasks });
     },
   );
 }

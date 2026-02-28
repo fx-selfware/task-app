@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { httpError } from '../utils/httpError';
 
 export interface CreateTemplateInput {
   name: string;
@@ -15,20 +16,21 @@ export interface UpdateTemplateTaskInput {
 }
 
 export async function getTemplates(prisma: PrismaClient, userId: string) {
-  const owned = await prisma.taskTemplate.findMany({
-    where: { ownerId: userId },
-    include: { _count: { select: { tasks: true } } },
-    orderBy: { createdAt: 'asc' },
-  });
-
-  const shared = await prisma.taskTemplate.findMany({
-    where: { shares: { some: { userId } } },
-    include: {
-      _count: { select: { tasks: true } },
-      shares: { where: { userId }, select: { permission: true } },
-    },
-    orderBy: { createdAt: 'asc' },
-  });
+  const [owned, shared] = await Promise.all([
+    prisma.taskTemplate.findMany({
+      where: { ownerId: userId },
+      include: { _count: { select: { tasks: true } } },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.taskTemplate.findMany({
+      where: { shares: { some: { userId } } },
+      include: {
+        _count: { select: { tasks: true } },
+        shares: { where: { userId }, select: { permission: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ]);
 
   return {
     owned: owned.map((t) => ({ ...t, role: 'owner' as const })),
@@ -65,11 +67,7 @@ export async function getTemplateWithAccess(
     },
   });
 
-  if (!template) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!template) httpError(404, 'Not found');
 
   const isOwner = template.ownerId === userId;
   const permission = isOwner ? ('WRITE' as const) : (template.shares[0]?.permission ?? null);
@@ -87,11 +85,7 @@ async function requireWriteAccess(prisma: PrismaClient, templateId: string, user
       ],
     },
   });
-  if (!template) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!template) httpError(404, 'Not found');
   return template;
 }
 
@@ -113,11 +107,7 @@ export async function deleteTemplate(
   const template = await prisma.taskTemplate.findFirst({
     where: { id: templateId, ownerId: userId },
   });
-  if (!template) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!template) httpError(404, 'Not found');
 
   await prisma.taskTemplate.delete({ where: { id: templateId } });
 }
@@ -151,11 +141,7 @@ export async function updateTemplateTask(
   await requireWriteAccess(prisma, templateId, userId);
 
   const task = await prisma.templateTask.findFirst({ where: { id: taskId, templateId } });
-  if (!task) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!task) httpError(404, 'Not found');
 
   return prisma.templateTask.update({
     where: { id: taskId },
@@ -175,11 +161,7 @@ export async function deleteTemplateTask(
   await requireWriteAccess(prisma, templateId, userId);
 
   const task = await prisma.templateTask.findFirst({ where: { id: taskId, templateId } });
-  if (!task) {
-    const err = new Error('Not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!task) httpError(404, 'Not found');
 
   await prisma.templateTask.delete({ where: { id: taskId } });
 }
@@ -187,7 +169,6 @@ export async function deleteTemplateTask(
 export async function applyTemplate(
   prisma: PrismaClient,
   templateId: string,
-  _templateOwnerId: string,
   taskListId: string,
   requestingUserId: string,
 ) {
@@ -201,11 +182,7 @@ export async function applyTemplate(
     },
     include: { tasks: { orderBy: { order: 'asc' } } },
   });
-  if (!template) {
-    const err = new Error('Template not found') as Error & { statusCode: number };
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!template) httpError(404, 'Template not found');
 
   // Check write access on target list
   const list = await prisma.taskList.findFirst({
@@ -221,11 +198,7 @@ export async function applyTemplate(
       ],
     },
   });
-  if (!list) {
-    const err = new Error('No write access to task list') as Error & { statusCode: number };
-    err.statusCode = 403;
-    throw err;
-  }
+  if (!list) httpError(403, 'No write access to task list');
 
   const maxOrder = await prisma.task.aggregate({
     where: { taskListId },

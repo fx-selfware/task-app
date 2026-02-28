@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useMe, useLogout } from '../hooks/useAuth';
 import { useTaskLists } from '../hooks/useTaskLists';
@@ -7,6 +7,13 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  `flex items-center rounded-lg px-2 py-1.5 text-sm transition-colors ${
+    isActive
+      ? 'bg-blue-50 text-blue-700 font-medium'
+      : 'text-gray-700 hover:bg-gray-100'
+  }`;
+
 export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { data: user } = useMe();
@@ -14,10 +21,10 @@ export function Layout({ children }: LayoutProps) {
   const logout = useLogout();
   const navigate = useNavigate();
 
-  const allLists = [
-    ...(listsData?.owned ?? []),
-    ...(listsData?.shared ?? []),
-  ];
+  const allLists = useMemo(
+    () => [...(listsData?.owned ?? []), ...(listsData?.shared ?? [])],
+    [listsData],
+  );
 
   const handleLogout = async () => {
     await logout.mutateAsync().catch(() => {});
@@ -62,13 +69,7 @@ export function Layout({ children }: LayoutProps) {
                     key={list.id}
                     to={`/task-lists/${list.id}`}
                     onClick={() => setSidebarOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center rounded-lg px-2 py-1.5 text-sm transition-colors ${
-                        isActive
-                          ? 'bg-blue-50 text-blue-700 font-medium'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`
-                    }
+                    className={navLinkClass}
                   >
                     <span className="truncate">{list.name}</span>
                     {list.role === 'shared' && (
@@ -84,26 +85,14 @@ export function Layout({ children }: LayoutProps) {
                 to="/task-lists"
                 end
                 onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center rounded-lg px-2 py-1.5 text-sm transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`
-                }
+                className={navLinkClass}
               >
                 All Lists
               </NavLink>
               <NavLink
                 to="/templates"
                 onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center rounded-lg px-2 py-1.5 text-sm transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`
-                }
+                className={navLinkClass}
               >
                 Templates
               </NavLink>
@@ -111,13 +100,7 @@ export function Layout({ children }: LayoutProps) {
                 <NavLink
                   to="/admin"
                   onClick={() => setSidebarOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center rounded-lg px-2 py-1.5 text-sm transition-colors ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`
-                  }
+                  className={navLinkClass}
                 >
                   <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
