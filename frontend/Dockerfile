@@ -19,6 +19,8 @@ EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 FROM base AS builder
+ARG COMMIT_SHA=
+ENV COMMIT_SHA=$COMMIT_SHA
 COPY . .
 RUN npm run build
 

@@ -45,6 +45,7 @@ services:
       args:
         PROXY_CA_B64: ${PROXY_CA_CERT_B64:-}
         PROXY_HOST: ${DOCKER_PROXY_HOST:-}
+        COMMIT_SHA: ${COMMIT_SHA:-}
     depends_on:
       backend:
         condition: service_healthy

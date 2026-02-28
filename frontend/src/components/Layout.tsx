@@ -112,6 +112,7 @@ export function Layout({ children }: LayoutProps) {
 
           {/* User footer */}
           <div className="border-t p-3">
+            <p className="mb-2 text-center text-xs text-gray-400">build {__APP_COMMIT__}</p>
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-sm font-semibold">
                 {user?.name.charAt(0).toUpperCase()}
