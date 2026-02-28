@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Workflow
 
-Do not create git commits unless explicitly asked to do so.
+**Do NOT create git commits or amend existing commits unless the user explicitly asks to commit.** Making an edit does not imply permission to commit it.
 
 Mobile experience is very important — both iOS Safari/Chrome and Android Chrome are equally important. Always ensure UI changes work well on small screens (e.g. use `text-base sm:text-sm` on inputs to prevent auto-zoom, test touch interactions, respect mobile viewports).
 

@@ -58,6 +58,7 @@ jobs:
               - 'Caddyfile'
               - 'docker-compose.yml'
               - 'docker-compose.prod.yml'
+              - '.github/workflows/**'
 
       - name: Set up Docker Buildx
         if: steps.filter.outputs.app == 'true'
