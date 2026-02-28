@@ -20,9 +20,20 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 FROM base AS builder
 ARG COMMIT_SHA=
-ENV COMMIT_SHA=$COMMIT_SHA
+COPY --from=gitdir / /tmp/git
+RUN printf '%s' "$COMMIT_SHA" > /tmp/arg_sha
+RUN sha=$(cat /tmp/arg_sha); \
+  if [ -z "$sha" ] && [ -f /tmp/git/HEAD ]; then \
+    ref=$(cat /tmp/git/HEAD); \
+    case "$ref" in \
+      ref:*) sha=$(cat "/tmp/git/$(echo "$ref" | cut -d' ' -f2)" 2>/dev/null || \
+             grep "$(echo "$ref" | cut -d' ' -f2)" /tmp/git/packed-refs 2>/dev/null | cut -d' ' -f1) ;; \
+      *) sha="$ref" ;; \
+    esac; \
+  fi; \
+  printf '%s' "$sha" > /tmp/commit_sha
 COPY . .
-RUN npm run build
+RUN export COMMIT_SHA=$(cat /tmp/commit_sha) && npm run build
 
 FROM nginx:1.25-alpine AS production
 COPY --from=builder /app/dist /usr/share/nginx/html

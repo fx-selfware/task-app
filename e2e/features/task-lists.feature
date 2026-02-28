@@ -59,3 +59,6 @@ Feature: Task Lists
     And I check the checkbox for "Task A"
     And I expand the completed section
     Then "Task A" appears with strikethrough styling
+
+  Scenario: The app displays a build version in the sidebar
+    Then the sidebar shows a real build hash

@@ -126,3 +126,8 @@ Then('{string} appears with strikethrough styling', async ({ page }, name: strin
   const taskTitle = page.locator('p').filter({ hasText: name }).first();
   await expect(taskTitle).toHaveClass(/line-through/, { timeout: 5000 });
 });
+
+Then('the sidebar shows a real build hash', async ({ page }) => {
+  const sidebar = page.getByTestId('sidebar');
+  await expect(sidebar.getByText(/^build [0-9a-f]{7}$/)).toBeVisible({ timeout: 5000 });
+});
