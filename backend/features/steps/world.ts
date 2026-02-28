@@ -6,14 +6,6 @@ import { buildApp } from '../../src/server';
 // Shared single app instance across all scenarios (avoids Prisma runtime conflicts)
 let sharedApp: FastifyInstance | null = null;
 
-async function getSharedApp(): Promise<FastifyInstance> {
-  if (!sharedApp) {
-    sharedApp = await buildApp();
-    await sharedApp.ready();
-  }
-  return sharedApp;
-}
-
 BeforeAll(async function () {
   sharedApp = await buildApp();
   await sharedApp.ready();
