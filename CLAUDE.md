@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Mobile experience is very important — both iOS Safari/Chrome and Android Chrome are equally important. Always ensure UI changes work well on small screens (e.g. use `text-base sm:text-sm` on inputs to prevent auto-zoom, test touch interactions, respect mobile viewports).
 
+**Always run backend BDD tests after any backend change.** Use the backend BDD test command (see Backend section below). Do not consider backend work complete until BDD tests pass.
+
 **Always run E2E tests after any frontend change.** Use the clean-DB E2E run command (see E2E section below). Do not consider frontend work complete until E2E tests pass.
 
 When updating documentation, apply changes to all relevant docs in the repo (e.g. both CLAUDE.md and README.md), not just one file.

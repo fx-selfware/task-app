@@ -40,6 +40,7 @@ export function TemplateDetailPage() {
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [editingTask, setEditingTask] = useState<TemplateTask | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<TemplateTask | null>(null);
   const [showApply, setShowApply] = useState(false);
   const [applyListId, setApplyListId] = useState('');
@@ -67,10 +68,19 @@ export function TemplateDetailPage() {
     setShowAddTask(false);
   };
 
+  const openEdit = (task: TemplateTask) => {
+    setEditTitle(task.title);
+    setEditDesc(task.description ?? '');
+    setEditingTask(task);
+  };
+
   const handleEditTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTask) return;
-    await updateTask.mutateAsync({ taskId: editingTask.id, data: { title: editTitle } });
+    await updateTask.mutateAsync({
+      taskId: editingTask.id,
+      data: { title: editTitle, description: editDesc.trim() },
+    });
     setEditingTask(null);
   };
 
@@ -103,16 +113,18 @@ export function TemplateDetailPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Button size="sm" onClick={() => setShowApply(true)}>
-            Apply
-          </Button>
+          {canWrite && (
+            <Button size="sm" onClick={() => setShowAddTask(true)}>
+              + Task
+            </Button>
+          )}
           <OverflowMenu
             aria-label="Template actions"
             items={[
+              { label: 'Apply', onClick: () => setShowApply(true) },
               ...(isOwner ? [{ label: 'Share', onClick: () => setShowShares(true) }] : []),
               ...(canWrite ? [
                 { label: 'Rename', onClick: () => { setRenameName(template.name); setShowRename(true); } },
-                { label: '+ Task', onClick: () => setShowAddTask(true) },
               ] : []),
             ]}
           />
@@ -128,48 +140,32 @@ export function TemplateDetailPage() {
           {(template.tasks ?? []).map((task) => (
             <div
               key={task.id}
-              className="group flex items-center gap-3 rounded-lg border bg-white p-3 shadow-sm"
+              className="group flex items-start gap-3 rounded-lg border bg-white p-3 shadow-sm"
             >
-              <div className="flex-1 min-w-0">
+              <div
+                className={`flex-1 min-w-0 ${canWrite ? 'cursor-pointer' : ''}`}
+                onClick={canWrite ? () => openEdit(task) : undefined}
+              >
                 <p className="font-medium text-gray-900">{task.title}</p>
                 {task.description && (
-                  <p className="text-sm text-gray-500">{task.description}</p>
+                  <p className="mt-0.5 text-sm text-gray-500">{task.description}</p>
                 )}
               </div>
               {canWrite && (
-                <>
-                  <button
-                    onClick={() => {
-                      setEditingTask(task);
-                      setEditTitle(task.title);
-                    }}
-                    className="p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-blue-500"
-                    aria-label="Edit task"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget(task)}
-                    className="p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
-                    aria-label="Delete task"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </>
+                <button
+                  onClick={() => setDeleteTarget(task)}
+                  className="mt-0.5 p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
+                  aria-label="Delete task"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
               )}
             </div>
           ))}
@@ -204,6 +200,13 @@ export function TemplateDetailPage() {
             label="Title"
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                (e.target as HTMLInputElement).form?.requestSubmit();
+              }
+            }}
+            enterKeyHint="done"
             required
             autoFocus
           />
@@ -230,19 +233,33 @@ export function TemplateDetailPage() {
       </Modal>
 
       {/* Edit task */}
-      <Modal
-        open={!!editingTask}
-        onClose={() => setEditingTask(null)}
-        title="Edit Task"
-      >
+      <Modal open={!!editingTask} onClose={() => setEditingTask(null)} title="Edit Task">
         <form onSubmit={handleEditTask} className="space-y-4">
           <Input
             label="Title"
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                (e.target as HTMLInputElement).form?.requestSubmit();
+              }
+            }}
+            enterKeyHint="done"
             required
             autoFocus
           />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Description (optional)
+            </label>
+            <textarea
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+            />
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setEditingTask(null)} type="button">
               Cancel
