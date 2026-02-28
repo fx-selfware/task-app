@@ -166,6 +166,31 @@ export async function deleteTemplateTask(
   await prisma.templateTask.delete({ where: { id: taskId } });
 }
 
+export async function reorderTemplateTasks(
+  prisma: PrismaClient,
+  templateId: string,
+  userId: string,
+  orderedIds: string[],
+) {
+  await requireWriteAccess(prisma, templateId, userId);
+
+  const tasks = await prisma.templateTask.findMany({
+    where: { templateId },
+    select: { id: true },
+  });
+  const existingIds = new Set(tasks.map((t) => t.id));
+
+  for (const id of orderedIds) {
+    if (!existingIds.has(id)) httpError(400, 'Task not found in template');
+  }
+
+  await prisma.$transaction(
+    orderedIds.map((id, index) =>
+      prisma.templateTask.update({ where: { id }, data: { order: index } }),
+    ),
+  );
+}
+
 export async function applyTemplate(
   prisma: PrismaClient,
   templateId: string,

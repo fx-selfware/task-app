@@ -59,6 +59,29 @@ Given(
 );
 
 Given(
+  'I have a template named {string} with tasks {string}, {string} and {string}',
+  async function (this: AppWorld, name: string, t1: string, t2: string, t3: string) {
+    const res = await this.app.inject({
+      method: 'POST',
+      url: '/api/templates',
+      payload: { name },
+      headers: { cookie: this.myCookie },
+    });
+    this.templateId = res.json().template.id;
+    this.taskIds = [];
+    for (const title of [t1, t2, t3]) {
+      const taskRes = await this.app.inject({
+        method: 'POST',
+        url: `/api/templates/${this.templateId}/tasks`,
+        payload: { title },
+        headers: { cookie: this.myCookie },
+      });
+      this.taskIds.push(taskRes.json().task.id);
+    }
+  },
+);
+
+Given(
   'that list has a task {string}',
   async function (this: AppWorld, title: string) {
     await this.app.inject({
@@ -194,3 +217,34 @@ Then('the list has {int} total tasks', async function (this: AppWorld, count: nu
   });
   expect(listRes.json().list.tasks).to.have.length(count);
 });
+
+When('I PUT reorder template tasks with reverse order', async function (this: AppWorld) {
+  const reversed = [...this.taskIds].reverse();
+  await this.request('PUT', `/api/templates/${this.templateId}/tasks/reorder`, {
+    payload: { orderedIds: reversed },
+    cookie: this.myCookie,
+  });
+});
+
+Then('the template tasks are in reverse order', async function (this: AppWorld) {
+  const res = await this.app.inject({
+    method: 'GET',
+    url: `/api/templates/${this.templateId}`,
+    headers: { cookie: this.myCookie },
+  });
+  const tasks = res.json().template.tasks;
+  const reversed = [...this.taskIds].reverse();
+  expect(tasks[0].id).to.equal(reversed[0]);
+  expect(tasks[1].id).to.equal(reversed[1]);
+  expect(tasks[2].id).to.equal(reversed[2]);
+});
+
+When(
+  'user {string} PUTs reorder on that template',
+  async function (this: AppWorld, email: string) {
+    await this.request('PUT', `/api/templates/${this.templateId}/tasks/reorder`, {
+      payload: { orderedIds: [] },
+      cookie: this.cookieFor(email),
+    });
+  },
+);

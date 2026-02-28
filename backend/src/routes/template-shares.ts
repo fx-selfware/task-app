@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { Permission } from '@prisma/client';
 import { requireAuth } from '../middleware/requireAuth';
+import { publish } from '../services/events';
 import {
   getTemplateShares,
   createTemplateShare,
@@ -39,6 +40,7 @@ export async function templateShareRoutes(app: FastifyInstance) {
         email,
         perm,
       );
+      publish(`template:${id}`);
       return reply.status(201).send({ share });
     },
   );
@@ -59,6 +61,7 @@ export async function templateShareRoutes(app: FastifyInstance) {
         request.user.userId,
         permission,
       );
+      publish(`template:${id}`);
       return reply.send({ share });
     },
   );
@@ -70,6 +73,7 @@ export async function templateShareRoutes(app: FastifyInstance) {
       const { id, sid } = request.params as { id: string; sid: string };
 
       await deleteTemplateShare(app.prisma, id, sid, request.user.userId);
+      publish(`template:${id}`);
       return reply.status(204).send();
     },
   );

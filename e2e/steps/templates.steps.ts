@@ -1,6 +1,8 @@
 import { createBdd } from 'playwright-bdd';
 const { Given, When, Then } = createBdd();
-import { expect } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
+
+let tplCollabPage: Page | null = null;
 
 const unique = () => `e2e_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
@@ -58,5 +60,73 @@ Then(
     const shareItem = page.locator('li').filter({ hasText: email });
     await expect(shareItem).toBeVisible({ timeout: 5000 });
     await expect(shareItem.locator('select')).toHaveValue(permission.toUpperCase());
+  },
+);
+
+When('I add a template task named {string}', async ({ page }, name: string) => {
+  await page.getByRole('button', { name: '+ Task' }).click();
+  await page.getByLabel('Title').fill(name);
+  await page.getByRole('button', { name: 'Add' }).click();
+  await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });
+});
+
+When(
+  'I drag the template task {string} above {string}',
+  async ({ page }, source: string, target: string) => {
+    const sourceHandle = page
+      .locator('.space-y-2 > div')
+      .filter({ hasText: source })
+      .first()
+      .getByRole('button', { name: 'Drag to reorder' });
+    const targetCard = page
+      .locator('.space-y-2 > div')
+      .filter({ hasText: target })
+      .first();
+
+    await sourceHandle.dragTo(targetCard);
+  },
+);
+
+Then(
+  '{string} appears before {string} in the template',
+  async ({ page }, first: string, second: string) => {
+    await page.waitForTimeout(1000);
+    const taskTitles = page.locator('.space-y-2 > div .font-medium');
+    const texts = await taskTitles.allTextContents();
+    const firstIndex = texts.indexOf(first);
+    const secondIndex = texts.indexOf(second);
+    expect(firstIndex).toBeGreaterThanOrEqual(0);
+    expect(secondIndex).toBeGreaterThanOrEqual(0);
+    expect(firstIndex).toBeLessThan(secondIndex);
+  },
+);
+
+When(
+  'the collaborator {string} opens the template {string}',
+  async ({ browser }, email: string, templateName: string) => {
+    const baseURL = process.env.BASE_URL ?? 'http://localhost';
+    const context = await browser.newContext({ baseURL });
+    tplCollabPage = await context.newPage();
+    await tplCollabPage.goto('/login');
+    await tplCollabPage.fill('input[type="email"]', email);
+    await tplCollabPage.fill('input[type="password"]', 'password123');
+    await tplCollabPage.click('button[type="submit"]');
+    await expect(tplCollabPage).toHaveURL(/\/task-lists/, { timeout: 5000 });
+    await tplCollabPage.getByText('Templates', { exact: true }).click();
+    await tplCollabPage.waitForURL(/\/templates/);
+    await tplCollabPage.getByText(templateName, { exact: true }).first().click();
+    await tplCollabPage.waitForURL(/\/templates\/[a-z0-9]+/);
+    await expect(tplCollabPage.locator('h1')).toContainText(templateName, { timeout: 5000 });
+    await tplCollabPage.waitForTimeout(1000);
+  },
+);
+
+Then(
+  'the collaborator sees {string} in the template without refreshing',
+  async ({}, name: string) => {
+    expect(tplCollabPage).toBeTruthy();
+    await expect(tplCollabPage!.getByText(name)).toBeVisible({ timeout: 10_000 });
+    await tplCollabPage!.context().close();
+    tplCollabPage = null;
   },
 );

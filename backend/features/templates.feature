@@ -46,6 +46,20 @@ Feature: Templates API
     When I DELETE that template task
     Then the status is 204
 
+  Scenario: Reorder template tasks
+    Given I have a template named "My Template" with tasks "Task 1", "Task 2" and "Task 3"
+    When I PUT reorder template tasks with reverse order
+    Then the status is 200
+    And the template tasks are in reverse order
+
+  Scenario: READ-permission user cannot reorder template tasks
+    Given I have a template named "Shared Template"
+    And I add a template task "Task A" to that template
+    And I add a template task "Task B" to that template
+    And I have shared that template with "bob@example.com" as READ
+    When user "bob@example.com" PUTs reorder on that template
+    Then the status is 404
+
   Scenario: Apply template to list appends tasks
     Given I have a template named "Sprint" with tasks "Task 1" and "Task 2"
     And I own a task list named "My List"

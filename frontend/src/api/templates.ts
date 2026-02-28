@@ -32,6 +32,9 @@ export const templatesApi = {
   deleteTask: (templateId: string, taskId: string) =>
     api.delete<void>(`/templates/${templateId}/tasks/${taskId}`),
 
+  reorderTasks: (templateId: string, orderedIds: string[]) =>
+    api.put<{ ok: boolean }>(`/templates/${templateId}/tasks/reorder`, { orderedIds }),
+
   apply: (templateId: string, taskListId: string) =>
     api.post<{ tasks: Task[] }>(`/templates/${templateId}/apply`, { taskListId }),
 

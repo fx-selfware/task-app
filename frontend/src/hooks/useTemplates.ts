@@ -86,6 +86,16 @@ export function useDeleteTemplateTask(templateId: string) {
   });
 }
 
+export function useReorderTemplateTasks(templateId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderedIds: string[]) => templatesApi.reorderTasks(templateId, orderedIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates', templateId] });
+    },
+  });
+}
+
 export function useApplyTemplate() {
   const queryClient = useQueryClient();
   return useMutation({

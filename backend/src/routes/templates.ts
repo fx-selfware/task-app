@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { requireAuth } from '../middleware/requireAuth';
+import { subscribe, publish } from '../services/events';
 import {
   getTemplates,
   createTemplate,
@@ -9,6 +10,7 @@ import {
   createTemplateTask,
   updateTemplateTask,
   deleteTemplateTask,
+  reorderTemplateTasks,
   applyTemplate,
 } from '../services/templates';
 
@@ -42,12 +44,14 @@ export async function templateRoutes(app: FastifyInstance) {
     if (!name) return reply.status(400).send({ error: 'name is required' });
 
     const template = await updateTemplate(app.prisma, id, request.user.userId, name);
+    publish(`template:${id}`);
     return reply.send({ template });
   });
 
   app.delete('/templates/:id', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
     await deleteTemplate(app.prisma, id, request.user.userId);
+    publish(`template:${id}`);
     return reply.status(204).send();
   });
 
@@ -67,6 +71,7 @@ export async function templateRoutes(app: FastifyInstance) {
         title,
         description,
       });
+      publish(`template:${id}`);
       return reply.status(201).send({ task });
     },
   );
@@ -85,6 +90,7 @@ export async function templateRoutes(app: FastifyInstance) {
         request.user.userId,
         body,
       );
+      publish(`template:${id}`);
       return reply.send({ task });
     },
   );
@@ -96,7 +102,25 @@ export async function templateRoutes(app: FastifyInstance) {
       const { id, tid } = request.params as { id: string; tid: string };
 
       await deleteTemplateTask(app.prisma, id, tid, request.user.userId);
+      publish(`template:${id}`);
       return reply.status(204).send();
+    },
+  );
+
+  app.put(
+    '/templates/:id/tasks/reorder',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const { orderedIds } = request.body as { orderedIds: string[] };
+
+      if (!Array.isArray(orderedIds)) {
+        return reply.status(400).send({ error: 'orderedIds must be an array' });
+      }
+
+      await reorderTemplateTasks(app.prisma, id, request.user.userId, orderedIds);
+      publish(`template:${id}`);
+      return reply.send({ ok: true });
     },
   );
 
@@ -116,6 +140,50 @@ export async function templateRoutes(app: FastifyInstance) {
         request.user.userId,
       );
       return reply.status(201).send({ tasks });
+    },
+  );
+
+  // SSE events for real-time template sync
+  app.get(
+    '/templates/:id/events',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      await getTemplateWithAccess(app.prisma, id, request.user.userId);
+
+      await reply.hijack();
+
+      reply.raw.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      });
+      reply.raw.write(':connected\n\n');
+
+      const heartbeat = setInterval(() => {
+        try {
+          reply.raw.write(':heartbeat\n\n');
+        } catch {
+          clearInterval(heartbeat);
+          unsubscribe();
+        }
+      }, 30_000);
+
+      const unsubscribe = subscribe(`template:${id}`, () => {
+        try {
+          reply.raw.write('data: update\n\n');
+        } catch {
+          clearInterval(heartbeat);
+          unsubscribe();
+        }
+      });
+
+      request.raw.on('close', () => {
+        clearInterval(heartbeat);
+        unsubscribe();
+      });
     },
   );
 }
