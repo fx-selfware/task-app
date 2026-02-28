@@ -1,6 +1,8 @@
 import { createBdd } from 'playwright-bdd';
 const { Given, When, Then } = createBdd();
-import { expect } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
+
+let collabPage: Page | null = null;
 
 Given('I have a task list named {string}', async ({ page }, name: string) => {
   await page.click('text=+ New List');
@@ -131,3 +133,37 @@ Then('the sidebar shows a real build hash', async ({ page }) => {
   const sidebar = page.getByTestId('sidebar');
   await expect(sidebar.getByText(/^build [0-9a-f]{7}$/)).toBeVisible({ timeout: 5000 });
 });
+
+When('I close the dialog', async ({ page }) => {
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
+});
+
+When(
+  'the collaborator {string} opens the task list {string}',
+  async ({ browser }, email: string, listName: string) => {
+    const baseURL = process.env.BASE_URL ?? 'http://localhost';
+    const context = await browser.newContext({ baseURL });
+    collabPage = await context.newPage();
+    await collabPage.goto('/login');
+    await collabPage.fill('input[type="email"]', email);
+    await collabPage.fill('input[type="password"]', 'password123');
+    await collabPage.click('button[type="submit"]');
+    await expect(collabPage).toHaveURL(/\/task-lists/, { timeout: 5000 });
+    await collabPage.getByText(listName, { exact: true }).first().click();
+    await collabPage.waitForURL(/\/task-lists\/[a-z0-9]+/);
+    await expect(collabPage.locator('h1')).toContainText(listName, { timeout: 5000 });
+    // Allow time for the EventSource SSE connection to establish
+    await collabPage.waitForTimeout(1000);
+  },
+);
+
+Then(
+  'the collaborator sees {string} without refreshing',
+  async ({}, name: string) => {
+    expect(collabPage).toBeTruthy();
+    await expect(collabPage!.getByText(name)).toBeVisible({ timeout: 10_000 });
+    await collabPage!.context().close();
+    collabPage = null;
+  },
+);

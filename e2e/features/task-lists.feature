@@ -60,5 +60,16 @@ Feature: Task Lists
     And I expand the completed section
     Then "Task A" appears with strikethrough styling
 
+  @ac
+  Scenario: Shared list updates in real-time when another user adds a task
+    Given I have a task list named "Realtime List"
+    And a collaborator exists with email "rt@example.com"
+    When I open the share modal for "Realtime List"
+    And I invite "rt@example.com" with "Write" permission
+    And I close the dialog
+    And the collaborator "rt@example.com" opens the task list "Realtime List"
+    And I add a task named "Live Update Task"
+    Then the collaborator sees "Live Update Task" without refreshing
+
   Scenario: The app displays a build version in the sidebar
     Then the sidebar shows a real build hash

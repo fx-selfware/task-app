@@ -32,6 +32,7 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Spinner } from '../components/Spinner';
 import { SharesModal } from './SharesModal';
+import { useTaskListEvents } from '../hooks/useTaskListEvents';
 import type { Task } from '../types';
 
 export function TaskListDetailPage() {
@@ -45,6 +46,7 @@ export function TaskListDetailPage() {
   const deleteTask = useDeleteTask(id!);
   const reorderTasks = useReorderTasks(id!);
   const deleteCompletedTasks = useDeleteCompletedTasks(id!);
+  useTaskListEvents(id!);
 
   const [showRename, setShowRename] = useState(false);
   const [renameName, setRenameName] = useState('');

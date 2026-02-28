@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { requireAuth } from '../middleware/requireAuth';
 import { getTaskListWithAccess } from '../services/taskLists';
 import { createTask, updateTask, deleteTask, reorderTasks, deleteCompletedTasks } from '../services/tasks';
+import { publish } from '../services/events';
 
 async function getWriteAccess(
   app: FastifyInstance,
@@ -40,6 +41,7 @@ export async function taskRoutes(app: FastifyInstance) {
 
       try {
         const task = await createTask(app.prisma, id, body);
+        publish(id, { type: 'tasks-changed', userId: request.user.userId });
         return reply.status(201).send({ task });
       } catch (err: unknown) {
         const e = err as Error & { statusCode?: number };
@@ -63,6 +65,7 @@ export async function taskRoutes(app: FastifyInstance) {
 
       try {
         const task = await updateTask(app.prisma, id, tid, body);
+        publish(id, { type: 'tasks-changed', userId: request.user.userId });
         return reply.send({ task });
       } catch (err: unknown) {
         const e = err as Error & { statusCode?: number };
@@ -81,6 +84,7 @@ export async function taskRoutes(app: FastifyInstance) {
 
       try {
         await deleteTask(app.prisma, id, tid);
+        publish(id, { type: 'tasks-changed', userId: request.user.userId });
         return reply.status(204).send();
       } catch (err: unknown) {
         const e = err as Error & { statusCode?: number };
@@ -99,6 +103,7 @@ export async function taskRoutes(app: FastifyInstance) {
 
       try {
         await deleteCompletedTasks(app.prisma, id);
+        publish(id, { type: 'tasks-changed', userId: request.user.userId });
         return reply.status(204).send();
       } catch (err: unknown) {
         const e = err as Error & { statusCode?: number };
@@ -122,6 +127,7 @@ export async function taskRoutes(app: FastifyInstance) {
 
       try {
         await reorderTasks(app.prisma, id, orderedIds);
+        publish(id, { type: 'tasks-changed', userId: request.user.userId });
         return reply.send({ ok: true });
       } catch (err: unknown) {
         const e = err as Error & { statusCode?: number };
