@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Do not create git commits unless explicitly asked to do so.
 
+Mobile experience is very important — both iOS Safari/Chrome and Android Chrome are equally important. Always ensure UI changes work well on small screens (e.g. use `text-base sm:text-sm` on inputs to prevent auto-zoom, test touch interactions, respect mobile viewports).
+
 When updating documentation, apply changes to all relevant docs in the repo (e.g. both CLAUDE.md and README.md), not just one file.
 
 ## Commands
@@ -52,7 +54,7 @@ docker compose up --build -d      # dev (port 8090, hot reload)
 # the generated Prisma client) is baked into the image, not bind-mounted.
 docker compose down
 
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d   # prod (HTTPS via Caddy)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d   # prod (HTTPS via Caddy, images from GHCR)
 # Requires DOMAIN in .env (e.g. task-app-fx.westus2.cloudapp.azure.com)
 ```
 
@@ -129,4 +131,4 @@ A host-level firewall restricts outbound network access. Docker containers route
 
 ### Deployment
 
-Production runs on a single Azure VM (`Standard_B1s`) at `task-app-fx.westus2.cloudapp.azure.com`. Pushing to `main` triggers GitHub Actions: backend BDD + E2E tests, then SSH deploy to the VM. GitHub secrets required: `VM_HOST`, `VM_USER`, `VM_SSH_KEY`.
+Production runs on a single Azure VM (`Standard_B1s`) at `task-app-fx.westus2.cloudapp.azure.com`. Pushing to `main` triggers GitHub Actions: backend BDD + E2E tests, then build and push images to GHCR, then SSH deploy to the VM (pull only, no build). GitHub secrets required: `VM_HOST`, `VM_USER`, `VM_SSH_KEY`.

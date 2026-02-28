@@ -1,6 +1,12 @@
 # Production-specific overrides.
-# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 services:
+  backend:
+    image: ghcr.io/fanxia0404/task-app-backend:latest
+
+  frontend:
+    image: ghcr.io/fanxia0404/task-app-frontend:latest
+
   caddy:
     image: caddy:2-alpine
     ports:

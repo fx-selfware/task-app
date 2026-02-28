@@ -39,7 +39,7 @@ git clone git@github.com:fanxia0404/task-app.git /app/task-app
 cd /app/task-app
 cp .env.example .env
 nano .env   # fill in secrets (see below)
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 > **Why `-f` flags?** `docker-compose.override.yml` is a dev-only file (Vite dev server, port 8090). Production must use only `docker-compose.yml` + `docker-compose.prod.yml` to get Caddy HTTPS + the built nginx image.
@@ -68,7 +68,7 @@ curl https://<your-domain>/api/auth/me
 Every push to `main` triggers the GitHub Actions workflow:
 
 1. **Test** — runs backend API tests in Docker (`docker-compose.test.yml`), starts the full stack, runs Playwright E2E tests
-2. **Deploy** — SSHes into the VM, pulls latest, rebuilds and restarts containers, runs migrations
+2. **Deploy** — builds images on GHA and pushes to GHCR, then SSHes into the VM, pulls images, and restarts containers (migrations run on startup)
 
 ### GitHub Secrets required
 
