@@ -274,7 +274,7 @@ export function TaskListDetailPage() {
               Description (optional)
             </label>
             <textarea
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={3}
               value={newTaskDesc}
               onChange={(e) => setNewTaskDesc(e.target.value)}
@@ -310,7 +310,7 @@ export function TaskListDetailPage() {
               Description (optional)
             </label>
             <textarea
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={3}
               value={editTaskDesc}
               onChange={(e) => setEditTaskDesc(e.target.value)}
