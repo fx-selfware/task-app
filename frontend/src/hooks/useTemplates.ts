@@ -52,7 +52,7 @@ export function useDeleteTemplate() {
 export function useCreateTemplateTask(templateId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { title: string; description?: string }) =>
+    mutationFn: (data: { title: string; description?: string; parentId?: string }) =>
       templatesApi.createTask(templateId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates', templateId] });
@@ -89,7 +89,13 @@ export function useDeleteTemplateTask(templateId: string) {
 export function useReorderTemplateTasks(templateId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (orderedIds: string[]) => templatesApi.reorderTasks(templateId, orderedIds),
+    mutationFn: ({
+      orderedIds,
+      parentId,
+    }: {
+      orderedIds: string[];
+      parentId?: string | null;
+    }) => templatesApi.reorderTasks(templateId, orderedIds, parentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates', templateId] });
     },

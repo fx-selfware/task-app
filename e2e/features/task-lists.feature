@@ -72,5 +72,31 @@ Feature: Task Lists
     And I add a task named "Live Update Task"
     Then the collaborator sees "Live Update Task" without refreshing
 
+  @ac
+  Scenario: A user can add a subtask to a task
+    Given I have a task list named "Subtask List"
+    When I open the task list "Subtask List"
+    And I add a task named "Parent Task"
+    And I add a subtask named "Child Task" to "Parent Task"
+    Then "Child Task" is visible in the task list
+
+  Scenario: Completing a parent task completes its subtasks
+    Given I have a task list named "Cascade List"
+    When I open the task list "Cascade List"
+    And I add a task named "Parent"
+    And I add a subtask named "Sub1" to "Parent"
+    And I check the checkbox for "Parent"
+    Then the completed section shows 2 completed tasks
+
+  Scenario: Subtasks are collapsible
+    Given I have a task list named "Collapse List"
+    When I open the task list "Collapse List"
+    And I add a task named "Parent"
+    And I add a subtask named "Sub1" to "Parent"
+    And I collapse the subtasks of "Parent"
+    Then "Sub1" is no longer visible in the task list
+    When I expand the subtasks of "Parent"
+    Then "Sub1" is visible in the task list
+
   Scenario: The app displays a build version in the sidebar
     Then the sidebar shows a real build hash

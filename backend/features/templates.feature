@@ -69,3 +69,30 @@ Feature: Templates API
     And 2 tasks are returned
     And the first applied task has order 1
     And the list has 3 total tasks
+
+  # --- Subtask scenarios ---
+
+  Scenario: Create template subtask
+    Given I have a template named "My Template"
+    And I add a template task "Parent" to that template
+    When I POST a template subtask "Sub 1" under "Parent"
+    Then the status is 201
+    And the template subtask has title "Sub 1"
+
+  Scenario: Cannot create template subtask under a subtask
+    Given I have a template named "My Template"
+    And I add a template task "Parent" to that template
+    And I add a template subtask "Sub 1" under "Parent"
+    When I POST a template subtask "Nested" under "Sub 1"
+    Then the status is 400
+
+  Scenario: Apply template preserves subtask hierarchy
+    Given I have a template named "Hierarchy Template"
+    And I add a template task "Parent" to that template
+    And I add a template subtask "Sub 1" under "Parent"
+    And I add a template subtask "Sub 2" under "Parent"
+    And I own a task list named "Target List"
+    When I apply that template to that list
+    Then the status is 201
+    And 3 tasks are returned
+    And the list task "Parent" has 2 subtasks

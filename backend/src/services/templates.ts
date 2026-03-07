@@ -8,6 +8,7 @@ export interface CreateTemplateInput {
 export interface CreateTemplateTaskInput {
   title: string;
   description?: string;
+  parentId?: string;
 }
 
 export interface UpdateTemplateTaskInput {
@@ -62,7 +63,11 @@ export async function getTemplateWithAccess(
       OR: [{ ownerId: userId }, { shares: { some: { userId } } }],
     },
     include: {
-      tasks: { orderBy: { order: 'asc' } },
+      tasks: {
+        where: { parentId: null },
+        orderBy: { order: 'asc' },
+        include: { subtasks: { orderBy: { order: 'asc' } } },
+      },
       shares: { where: { userId }, select: { permission: true } },
     },
   });
@@ -120,14 +125,29 @@ export async function createTemplateTask(
 ) {
   await requireWriteAccess(prisma, templateId, userId);
 
+  const effectiveParentId = input.parentId ?? null;
+
+  if (effectiveParentId) {
+    const parent = await prisma.templateTask.findFirst({
+      where: { id: effectiveParentId, templateId, parentId: null },
+    });
+    if (!parent) httpError(400, 'Invalid parent task');
+  }
+
   const maxOrder = await prisma.templateTask.aggregate({
-    where: { templateId },
+    where: { templateId, parentId: effectiveParentId },
     _max: { order: true },
   });
   const order = (maxOrder._max.order ?? -1) + 1;
 
   return prisma.templateTask.create({
-    data: { title: input.title, description: input.description, order, templateId },
+    data: {
+      title: input.title,
+      description: input.description,
+      order,
+      templateId,
+      parentId: effectiveParentId,
+    },
   });
 }
 
@@ -171,11 +191,12 @@ export async function reorderTemplateTasks(
   templateId: string,
   userId: string,
   orderedIds: string[],
+  parentId: string | null = null,
 ) {
   await requireWriteAccess(prisma, templateId, userId);
 
   const tasks = await prisma.templateTask.findMany({
-    where: { templateId },
+    where: { templateId, parentId },
     select: { id: true },
   });
   const existingIds = new Set(tasks.map((t) => t.id));
@@ -205,7 +226,9 @@ export async function applyTemplate(
         { shares: { some: { userId: requestingUserId } } },
       ],
     },
-    include: { tasks: { orderBy: { order: 'asc' } } },
+    include: {
+      tasks: { orderBy: { order: 'asc' } },
+    },
   });
   if (!template) httpError(404, 'Template not found');
 
@@ -226,23 +249,61 @@ export async function applyTemplate(
   if (!list) httpError(403, 'No write access to task list');
 
   const maxOrder = await prisma.task.aggregate({
-    where: { taskListId },
+    where: { taskListId, parentId: null },
     _max: { order: true },
   });
   const baseOrder = (maxOrder._max.order ?? -1) + 1;
 
-  const created = await prisma.$transaction(
-    template.tasks.map((tt, i) =>
-      prisma.task.create({
+  // Separate parents and subtasks
+  const parents = template.tasks.filter((tt) => tt.parentId === null);
+  const subtasksByParent = new Map<string, typeof template.tasks>();
+  for (const tt of template.tasks.filter((tt) => tt.parentId !== null)) {
+    const list = subtasksByParent.get(tt.parentId!) ?? [];
+    list.push(tt);
+    subtasksByParent.set(tt.parentId!, list);
+  }
+
+  const created = await prisma.$transaction(async (tx) => {
+    const results: any[] = [];
+    const templateIdToTaskId = new Map<string, string>();
+
+    // Create parent tasks
+    for (let i = 0; i < parents.length; i++) {
+      const tt = parents[i];
+      const task = await tx.task.create({
         data: {
           title: tt.title,
           description: tt.description,
           order: baseOrder + i,
           taskListId,
+          parentId: null,
         },
-      }),
-    ),
-  );
+      });
+      templateIdToTaskId.set(tt.id, task.id);
+      results.push(task);
+    }
+
+    // Create subtasks
+    for (const [templateParentId, subtasks] of subtasksByParent) {
+      const newParentId = templateIdToTaskId.get(templateParentId);
+      if (!newParentId) continue;
+      for (let j = 0; j < subtasks.length; j++) {
+        const st = subtasks[j];
+        const task = await tx.task.create({
+          data: {
+            title: st.title,
+            description: st.description,
+            order: j,
+            taskListId,
+            parentId: newParentId,
+          },
+        });
+        results.push(task);
+      }
+    }
+
+    return results;
+  });
 
   return created;
 }

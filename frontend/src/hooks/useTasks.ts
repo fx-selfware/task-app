@@ -5,7 +5,7 @@ import type { TaskStatus } from '../types';
 export function useCreateTask(listId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { title: string; description?: string }) =>
+    mutationFn: (data: { title: string; description?: string; parentId?: string }) =>
       tasksApi.create(listId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
@@ -56,7 +56,23 @@ export function useDeleteCompletedTasks(listId: string) {
 export function useReorderTasks(listId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (orderedIds: string[]) => tasksApi.reorder(listId, orderedIds),
+    mutationFn: ({
+      orderedIds,
+      parentId,
+    }: {
+      orderedIds: string[];
+      parentId?: string | null;
+    }) => tasksApi.reorder(listId, orderedIds, parentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
+    },
+  });
+}
+
+export function useDeleteCompletedSubtasks(listId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (parentId: string) => tasksApi.deleteCompletedSubtasks(listId, parentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
     },

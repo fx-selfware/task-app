@@ -168,3 +168,27 @@ Then(
     collabPage = null;
   },
 );
+
+// --- Subtask steps ---
+
+When('I add a subtask named {string} to {string}', async ({ page }, subName: string, parentName: string) => {
+  // Click "+ Subtask" link below the parent task
+  const parentCard = page.locator('div').filter({ hasText: parentName }).first();
+  const subtaskBtn = parentCard.getByText('+ Subtask');
+  await subtaskBtn.click();
+  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
+  await page.getByLabel('Title').fill(subName);
+  await page.getByRole('button', { name: 'Add' }).click();
+  await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
+  await expect(page.getByText(subName)).toBeVisible({ timeout: 5000 });
+});
+
+When('I collapse the subtasks of {string}', async ({ page }, parentName: string) => {
+  const collapseBtn = page.getByRole('button', { name: 'Collapse subtasks' });
+  await collapseBtn.click();
+});
+
+When('I expand the subtasks of {string}', async ({ page }, parentName: string) => {
+  const expandBtn = page.getByRole('button', { name: 'Expand subtasks' });
+  await expandBtn.click();
+});

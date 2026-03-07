@@ -160,3 +160,186 @@ Then('the list contains only {string}', async function (this: AppWorld, title: s
   expect(tasks).to.have.length(1);
   expect(tasks[0].title).to.equal(title);
 });
+
+// --- Subtask steps ---
+
+When(
+  'I POST a subtask with title {string} under {string}',
+  async function (this: AppWorld, title: string, parentTitle: string) {
+    const parentId = this.tasksByTitle[parentTitle];
+    await this.request('POST', `/api/task-lists/${this.listId}/tasks`, {
+      payload: { title, parentId },
+      cookie: this.myCookie,
+    });
+    if (this.response.statusCode === 201) {
+      this.taskId = this.response.body?.task?.id ?? null;
+      this.tasksByTitle[title] = this.taskId!;
+    }
+  },
+);
+
+Then(
+  'the subtask has title {string} and order {int}',
+  async function (this: AppWorld, title: string, order: number) {
+    const task = this.response.body?.task;
+    expect(task?.title).to.equal(title);
+    expect(task?.order).to.equal(order);
+    expect(task?.parentId).to.be.a('string');
+  },
+);
+
+Given(
+  'I have a subtask {string} under {string} in that list',
+  async function (this: AppWorld, subTitle: string, parentTitle: string) {
+    const parentId = this.tasksByTitle[parentTitle];
+    const res = await this.app.inject({
+      method: 'POST',
+      url: `/api/task-lists/${this.listId}/tasks`,
+      payload: { title: subTitle, parentId },
+      headers: { cookie: this.myCookie },
+    });
+    const task = res.json().task;
+    this.tasksByTitle[subTitle] = task.id;
+  },
+);
+
+Then(
+  'all subtasks of {string} have status {string}',
+  async function (this: AppWorld, parentTitle: string, status: string) {
+    const listRes = await this.app.inject({
+      method: 'GET',
+      url: `/api/task-lists/${this.listId}`,
+      headers: { cookie: this.myCookie },
+    });
+    const parent = listRes.json().list.tasks.find(
+      (t: any) => t.title === parentTitle,
+    );
+    expect(parent).to.exist;
+    for (const sub of parent.subtasks ?? []) {
+      expect(sub.status).to.equal(status);
+    }
+  },
+);
+
+Then(
+  'task {string} still has status {string}',
+  async function (this: AppWorld, title: string, status: string) {
+    const listRes = await this.app.inject({
+      method: 'GET',
+      url: `/api/task-lists/${this.listId}`,
+      headers: { cookie: this.myCookie },
+    });
+    const allTasks = listRes.json().list.tasks;
+    // Parent is top-level, subtask could be nested
+    let found = allTasks.find((t: any) => t.title === title);
+    if (!found) {
+      for (const t of allTasks) {
+        found = (t.subtasks ?? []).find((s: any) => s.title === title);
+        if (found) break;
+      }
+    }
+    expect(found).to.exist;
+    expect(found.status).to.equal(status);
+  },
+);
+
+When(
+  'I DELETE task {string} from that list',
+  async function (this: AppWorld, title: string) {
+    const taskId = this.tasksByTitle[title];
+    await this.request('DELETE', `/api/task-lists/${this.listId}/tasks/${taskId}`, {
+      cookie: this.myCookie,
+    });
+  },
+);
+
+Then('the list has {int} tasks', async function (this: AppWorld, count: number) {
+  const listRes = await this.app.inject({
+    method: 'GET',
+    url: `/api/task-lists/${this.listId}`,
+    headers: { cookie: this.myCookie },
+  });
+  const tasks = listRes.json().list.tasks;
+  // Count top-level + all subtasks
+  let total = 0;
+  for (const t of tasks) {
+    total += 1 + (t.subtasks?.length ?? 0);
+  }
+  expect(total).to.equal(count);
+});
+
+Given(
+  'I have subtasks {string}, {string}, {string} under {string} in that list',
+  async function (this: AppWorld, s1: string, s2: string, s3: string, parentTitle: string) {
+    const parentId = this.tasksByTitle[parentTitle];
+    this.taskIds = [];
+    for (const title of [s1, s2, s3]) {
+      const res = await this.app.inject({
+        method: 'POST',
+        url: `/api/task-lists/${this.listId}/tasks`,
+        payload: { title, parentId },
+        headers: { cookie: this.myCookie },
+      });
+      const id = res.json().task.id;
+      this.taskIds.push(id);
+      this.tasksByTitle[title] = id;
+    }
+  },
+);
+
+When(
+  'I PUT reorder subtasks under {string} with reverse order',
+  async function (this: AppWorld, parentTitle: string) {
+    const parentId = this.tasksByTitle[parentTitle];
+    const reversed = [...this.taskIds].reverse();
+    await this.request('PUT', `/api/task-lists/${this.listId}/tasks/reorder`, {
+      payload: { orderedIds: reversed, parentId },
+      cookie: this.myCookie,
+    });
+  },
+);
+
+Then(
+  'the subtasks of {string} are in reverse order',
+  async function (this: AppWorld, parentTitle: string) {
+    const listRes = await this.app.inject({
+      method: 'GET',
+      url: `/api/task-lists/${this.listId}`,
+      headers: { cookie: this.myCookie },
+    });
+    const parent = listRes.json().list.tasks.find(
+      (t: any) => t.title === parentTitle,
+    );
+    const reversed = [...this.taskIds].reverse();
+    for (let i = 0; i < reversed.length; i++) {
+      expect(parent.subtasks[i].id).to.equal(reversed[i]);
+    }
+  },
+);
+
+When(
+  'I DELETE completed subtasks of {string} from that list',
+  async function (this: AppWorld, parentTitle: string) {
+    const parentId = this.tasksByTitle[parentTitle];
+    await this.request(
+      'DELETE',
+      `/api/task-lists/${this.listId}/tasks/${parentId}/subtasks/completed`,
+      { cookie: this.myCookie },
+    );
+  },
+);
+
+Then(
+  'task {string} has {int} subtask(s)',
+  async function (this: AppWorld, parentTitle: string, count: number) {
+    const listRes = await this.app.inject({
+      method: 'GET',
+      url: `/api/task-lists/${this.listId}`,
+      headers: { cookie: this.myCookie },
+    });
+    const parent = listRes.json().list.tasks.find(
+      (t: any) => t.title === parentTitle,
+    );
+    expect(parent.subtasks).to.have.length(count);
+  },
+);

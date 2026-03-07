@@ -4,7 +4,7 @@ import type { Task, TaskStatus } from '../types';
 export const tasksApi = {
   create: (
     listId: string,
-    data: { title: string; description?: string },
+    data: { title: string; description?: string; parentId?: string },
   ) => api.post<{ task: Task }>(`/task-lists/${listId}/tasks`, data),
 
   update: (
@@ -16,9 +16,15 @@ export const tasksApi = {
   delete: (listId: string, taskId: string) =>
     api.delete<void>(`/task-lists/${listId}/tasks/${taskId}`),
 
-  reorder: (listId: string, orderedIds: string[]) =>
-    api.put<{ ok: boolean }>(`/task-lists/${listId}/tasks/reorder`, { orderedIds }),
+  reorder: (listId: string, orderedIds: string[], parentId?: string | null) =>
+    api.put<{ ok: boolean }>(`/task-lists/${listId}/tasks/reorder`, {
+      orderedIds,
+      parentId: parentId ?? null,
+    }),
 
   deleteCompleted: (listId: string) =>
     api.delete<void>(`/task-lists/${listId}/tasks/completed`),
+
+  deleteCompletedSubtasks: (listId: string, parentId: string) =>
+    api.delete<void>(`/task-lists/${listId}/tasks/${parentId}/subtasks/completed`),
 };

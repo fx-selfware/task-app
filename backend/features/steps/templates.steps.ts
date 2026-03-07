@@ -34,6 +34,7 @@ Given(
       headers: { cookie: this.myCookie },
     });
     this.templateTaskId = res.json().task.id;
+    this.tasksByTitle[title] = this.templateTaskId!;
   },
 );
 
@@ -246,5 +247,57 @@ When(
       payload: { orderedIds: [] },
       cookie: this.cookieFor(email),
     });
+  },
+);
+
+// --- Template subtask steps ---
+
+When(
+  'I POST a template subtask {string} under {string}',
+  async function (this: AppWorld, title: string, parentTitle: string) {
+    const parentId = this.tasksByTitle[parentTitle];
+    await this.request('POST', `/api/templates/${this.templateId}/tasks`, {
+      payload: { title, parentId },
+      cookie: this.myCookie,
+    });
+    if (this.response.statusCode === 201) {
+      this.tasksByTitle[title] = this.response.body?.task?.id;
+    }
+  },
+);
+
+Given(
+  'I add a template subtask {string} under {string}',
+  async function (this: AppWorld, subTitle: string, parentTitle: string) {
+    const parentId = this.tasksByTitle[parentTitle];
+    const res = await this.app.inject({
+      method: 'POST',
+      url: `/api/templates/${this.templateId}/tasks`,
+      payload: { title: subTitle, parentId },
+      headers: { cookie: this.myCookie },
+    });
+    this.tasksByTitle[subTitle] = res.json().task.id;
+  },
+);
+
+Then(
+  'the template subtask has title {string}',
+  async function (this: AppWorld, title: string) {
+    expect(this.response.body?.task?.title).to.equal(title);
+    expect(this.response.body?.task?.parentId).to.be.a('string');
+  },
+);
+
+Then(
+  'the list task {string} has {int} subtasks',
+  async function (this: AppWorld, title: string, count: number) {
+    const listRes = await this.app.inject({
+      method: 'GET',
+      url: `/api/task-lists/${this.listId}`,
+      headers: { cookie: this.myCookie },
+    });
+    const parent = listRes.json().list.tasks.find((t: any) => t.title === title);
+    expect(parent).to.exist;
+    expect(parent.subtasks).to.have.length(count);
   },
 );

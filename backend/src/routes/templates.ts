@@ -61,15 +61,17 @@ export async function templateRoutes(app: FastifyInstance) {
     { preHandler: requireAuth },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const { title, description } = request.body as {
+      const { title, description, parentId } = request.body as {
         title: string;
         description?: string;
+        parentId?: string;
       };
       if (!title) return reply.status(400).send({ error: 'title is required' });
 
       const task = await createTemplateTask(app.prisma, id, request.user.userId, {
         title,
         description,
+        parentId,
       });
       publish(`template:${id}`);
       return reply.status(201).send({ task });
@@ -112,13 +114,16 @@ export async function templateRoutes(app: FastifyInstance) {
     { preHandler: requireAuth },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const { orderedIds } = request.body as { orderedIds: string[] };
+      const { orderedIds, parentId } = request.body as {
+        orderedIds: string[];
+        parentId?: string | null;
+      };
 
       if (!Array.isArray(orderedIds)) {
         return reply.status(400).send({ error: 'orderedIds must be an array' });
       }
 
-      await reorderTemplateTasks(app.prisma, id, request.user.userId, orderedIds);
+      await reorderTemplateTasks(app.prisma, id, request.user.userId, orderedIds, parentId ?? null);
       publish(`template:${id}`);
       return reply.send({ ok: true });
     },

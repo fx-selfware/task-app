@@ -47,7 +47,11 @@ export async function getTaskListWithAccess(
       OR: [{ ownerId: userId }, { shares: { some: { userId } } }],
     },
     include: {
-      tasks: { orderBy: { order: 'asc' } },
+      tasks: {
+        where: { parentId: null },
+        orderBy: { order: 'asc' },
+        include: { subtasks: { orderBy: { order: 'asc' } } },
+      },
       shares: {
         include: { user: { select: { id: true, email: true, name: true } } },
       },

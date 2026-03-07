@@ -43,3 +43,55 @@ Feature: Tasks API
     When I DELETE completed tasks from that list
     Then the status is 204
     And the list contains only "Todo Task"
+
+  # --- Subtask scenarios ---
+
+  Scenario: Create subtask under a parent
+    Given I have a task "Parent Task" in that list
+    When I POST a subtask with title "Subtask 1" under "Parent Task"
+    Then the status is 201
+    And the subtask has title "Subtask 1" and order 0
+
+  Scenario: Cannot create subtask under a subtask
+    Given I have a task "Parent Task" in that list
+    And I have a subtask "Sub 1" under "Parent Task" in that list
+    When I POST a subtask with title "Nested" under "Sub 1"
+    Then the status is 400
+
+  Scenario: Completing a parent auto-completes subtasks
+    Given I have a task "Parent Task" in that list
+    And I have a subtask "Sub A" under "Parent Task" in that list
+    And I have a subtask "Sub B" under "Parent Task" in that list
+    When I PATCH that task with body '{"status":"DONE"}' for "Parent Task"
+    Then the status is 200
+    And all subtasks of "Parent Task" have status "DONE"
+
+  Scenario: Subtask status is independent from parent
+    Given I have a task "Parent Task" in that list
+    And I have a subtask "Sub A" under "Parent Task" in that list
+    When I PATCH that task with body '{"status":"DONE"}' for "Sub A"
+    Then the status is 200
+    And task "Parent Task" still has status "TODO"
+
+  Scenario: Deleting parent cascades to subtasks
+    Given I have a task "Parent Task" in that list
+    And I have a subtask "Sub A" under "Parent Task" in that list
+    When I DELETE task "Parent Task" from that list
+    Then the status is 204
+    And the list has 0 tasks
+
+  Scenario: Reorder subtasks within parent
+    Given I have a task "Parent" in that list
+    And I have subtasks "Sub A", "Sub B", "Sub C" under "Parent" in that list
+    When I PUT reorder subtasks under "Parent" with reverse order
+    Then the status is 200
+    And the subtasks of "Parent" are in reverse order
+
+  Scenario: Delete completed subtasks of a parent
+    Given I have a task "Parent" in that list
+    And I have a subtask "Done Sub" under "Parent" in that list
+    And I have a subtask "Todo Sub" under "Parent" in that list
+    When I PATCH that task with body '{"status":"DONE"}' for "Done Sub"
+    And I DELETE completed subtasks of "Parent" from that list
+    Then the status is 204
+    And task "Parent" has 1 subtask

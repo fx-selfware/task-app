@@ -47,8 +47,12 @@ model Task {
   updatedAt   DateTime   @updatedAt
   taskListId  String
   taskList    TaskList   @relation(fields: [taskListId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      Task?      @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks    Task[]     @relation("TaskSubtasks")
 
   @@index([taskListId, order])
+  @@index([parentId, order])
 }
 
 enum TaskStatus {
@@ -97,12 +101,16 @@ model TemplateShare {
 }
 
 model TemplateTask {
-  id          String       @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
   description String?
   order       Int
   templateId  String
-  template    TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template    TaskTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      TemplateTask?  @relation("TemplateTaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks    TemplateTask[] @relation("TemplateTaskSubtasks")
 
   @@index([templateId, order])
+  @@index([parentId, order])
 }

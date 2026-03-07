@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { requireAuth } from '../middleware/requireAuth';
 import { checkWriteAccess } from '../services/taskLists';
-import { createTask, updateTask, deleteTask, reorderTasks, deleteCompletedTasks } from '../services/tasks';
+import { createTask, updateTask, deleteTask, reorderTasks, deleteCompletedTasks, deleteCompletedSubtasks } from '../services/tasks';
 import { publish } from '../services/events';
 
 export async function taskRoutes(app: FastifyInstance) {
@@ -13,6 +13,7 @@ export async function taskRoutes(app: FastifyInstance) {
       const body = request.body as {
         title: string;
         description?: string;
+        parentId?: string;
       };
 
       if (!body.title) return reply.status(400).send({ error: 'title is required' });
@@ -68,19 +69,35 @@ export async function taskRoutes(app: FastifyInstance) {
     },
   );
 
+  app.delete(
+    '/task-lists/:id/tasks/:tid/subtasks/completed',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { id, tid } = request.params as { id: string; tid: string };
+
+      await checkWriteAccess(app.prisma, id, request.user.userId);
+      await deleteCompletedSubtasks(app.prisma, id, tid);
+      publish(id);
+      return reply.status(204).send();
+    },
+  );
+
   app.put(
     '/task-lists/:id/tasks/reorder',
     { preHandler: requireAuth },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const { orderedIds } = request.body as { orderedIds: string[] };
+      const { orderedIds, parentId } = request.body as {
+        orderedIds: string[];
+        parentId?: string | null;
+      };
 
       if (!Array.isArray(orderedIds)) {
         return reply.status(400).send({ error: 'orderedIds must be an array' });
       }
 
       await checkWriteAccess(app.prisma, id, request.user.userId);
-      await reorderTasks(app.prisma, id, orderedIds);
+      await reorderTasks(app.prisma, id, orderedIds, parentId ?? null);
       publish(id);
       return reply.send({ ok: true });
     },

@@ -16,6 +16,8 @@ export interface Task {
   status: TaskStatus;
   order: number;
   taskListId: string;
+  parentId: string | null;
+  subtasks?: Task[];
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +51,8 @@ export interface TemplateTask {
   description?: string | null;
   order: number;
   templateId: string;
+  parentId: string | null;
+  subtasks?: TemplateTask[];
 }
 
 export interface TemplateShare {

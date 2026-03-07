@@ -19,7 +19,7 @@ export const templatesApi = {
 
   createTask: (
     templateId: string,
-    data: { title: string; description?: string },
+    data: { title: string; description?: string; parentId?: string },
   ) => api.post<{ task: TemplateTask }>(`/templates/${templateId}/tasks`, data),
 
   updateTask: (
@@ -32,8 +32,11 @@ export const templatesApi = {
   deleteTask: (templateId: string, taskId: string) =>
     api.delete<void>(`/templates/${templateId}/tasks/${taskId}`),
 
-  reorderTasks: (templateId: string, orderedIds: string[]) =>
-    api.put<{ ok: boolean }>(`/templates/${templateId}/tasks/reorder`, { orderedIds }),
+  reorderTasks: (templateId: string, orderedIds: string[], parentId?: string | null) =>
+    api.put<{ ok: boolean }>(`/templates/${templateId}/tasks/reorder`, {
+      orderedIds,
+      parentId: parentId ?? null,
+    }),
 
   apply: (templateId: string, taskListId: string) =>
     api.post<{ tasks: Task[] }>(`/templates/${templateId}/apply`, { taskListId }),
