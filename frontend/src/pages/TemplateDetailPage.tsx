@@ -72,6 +72,7 @@ export function TemplateDetailPage() {
   const [showShares, setShowShares] = useState(false);
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
   const [collapsedParents, toggleCollapse] = useToggleSet();
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor),
@@ -217,7 +218,9 @@ export function TemplateDetailPage() {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
+          onDragStart={(event) => setActiveDragId(event.active.id as string)}
+          onDragEnd={(event) => { setActiveDragId(null); handleDragEnd(event); }}
+          onDragCancel={() => setActiveDragId(null)}
         >
           <SortableContext
             items={tasks.map((t) => t.id)}
@@ -243,7 +246,7 @@ export function TemplateDetailPage() {
                       onDelete={() => setDeleteTarget(task)}
                       onAddSubtask={() => openAddSubtask(task.id)}
                     />
-                    {hasSubtasks && !collapsed && (
+                    {hasSubtasks && !collapsed && activeDragId !== task.id && (
                       <div className="ml-8 mt-1 space-y-1">
                         <SubtaskDndList
                           items={subtasks}
@@ -263,16 +266,6 @@ export function TemplateDetailPage() {
                             />
                           )}
                         />
-                      </div>
-                    )}
-                    {!hasSubtasks && canWrite && !collapsed && (
-                      <div className="ml-8 mt-1">
-                        <button
-                          onClick={() => openAddSubtask(task.id)}
-                          className="py-1 text-xs text-gray-400 hover:text-gray-600"
-                        >
-                          + Subtask
-                        </button>
                       </div>
                     )}
                   </div>

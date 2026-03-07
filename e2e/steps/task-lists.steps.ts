@@ -38,7 +38,7 @@ When('I open the share modal for {string}', async ({ page }, name: string) => {
 When('I add a task named {string}', async ({ page }, name: string) => {
   await page.getByRole('button', { name: '+ Task' }).click();
   await page.getByLabel('Title').fill(name);
-  await page.getByRole('button', { name: 'Add' }).click();
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });
 });
 
@@ -157,13 +157,12 @@ Then(
 // --- Subtask steps ---
 
 When('I add a subtask named {string} to {string}', async ({ page }, subName: string, parentName: string) => {
-  // Click "+ Subtask" link below the parent task
-  const parentCard = page.locator('div').filter({ hasText: parentName }).first();
-  const subtaskBtn = parentCard.getByText('+ Subtask');
-  await subtaskBtn.click();
+  // Click the "+" add-subtask icon on the parent task card
+  const parentCard = page.locator('.group').filter({ hasText: parentName }).first();
+  await parentCard.getByRole('button', { name: 'Add subtask' }).click();
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
   await page.getByLabel('Title').fill(subName);
-  await page.getByRole('button', { name: 'Add' }).click();
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
   await expect(page.getByText(subName)).toBeVisible({ timeout: 5000 });
 });

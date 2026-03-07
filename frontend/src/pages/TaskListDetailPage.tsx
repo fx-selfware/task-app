@@ -69,6 +69,7 @@ export function TaskListDetailPage() {
   const [collapsedParents, toggleCollapse] = useToggleSet();
   const [showCompletedSubs, toggleCompletedSubs] = useToggleSet();
   const [deleteCompletedSubsTarget, setDeleteCompletedSubsTarget] = useState<string | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
   const tasks = data?.list?.tasks ?? [];
 
@@ -188,7 +189,7 @@ export function TaskListDetailPage() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {canWrite && (
-            <Button variant="secondary" size="sm" onClick={openAddTask}>
+            <Button size="sm" onClick={openAddTask}>
               + Task
             </Button>
           )}
@@ -216,7 +217,9 @@ export function TaskListDetailPage() {
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
+            onDragStart={(event) => setActiveDragId(event.active.id as string)}
+            onDragEnd={(event) => { setActiveDragId(null); handleDragEnd(event); }}
+            onDragCancel={() => setActiveDragId(null)}
           >
             <SortableContext
               items={todoTasks.map((t) => t.id)}
@@ -247,7 +250,7 @@ export function TaskListDetailPage() {
                         onEdit={() => openEdit(task)}
                         onAddSubtask={() => openAddSubtask(task.id)}
                       />
-                      {hasSubtasks && !collapsed && (
+                      {hasSubtasks && !collapsed && activeDragId !== task.id && (
                         <div className="ml-8 mt-1 space-y-1">
                           <SubtaskDndList
                             items={todoSubs}
@@ -305,16 +308,6 @@ export function TaskListDetailPage() {
                               )}
                             </div>
                           )}
-                        </div>
-                      )}
-                      {!hasSubtasks && canWrite && !collapsed && (
-                        <div className="ml-8 mt-1">
-                          <button
-                            onClick={() => openAddSubtask(task.id)}
-                            className="py-1 text-xs text-gray-400 hover:text-gray-600"
-                          >
-                            + Subtask
-                          </button>
                         </div>
                       )}
                     </div>
@@ -562,13 +555,13 @@ function CompletedTaskCard({
   onDelete: () => void;
 }) {
   return (
-    <div className="group flex items-start gap-3 rounded-lg border bg-white p-3 shadow-sm">
+    <div className="group flex items-center gap-3 rounded-lg border bg-white p-3 shadow-sm">
       <input
         type="checkbox"
         checked={true}
         onChange={canWrite ? onUncheck : undefined}
         disabled={!canWrite}
-        className="mt-1 h-5 w-5 cursor-pointer rounded border-gray-300"
+        className="h-5 w-5 cursor-pointer rounded border-gray-300"
         aria-label={`Mark "${task.title}" as todo`}
       />
       <div className="flex-1 min-w-0">
@@ -580,7 +573,7 @@ function CompletedTaskCard({
       {canWrite && (
         <button
           onClick={onDelete}
-          className="mt-0.5 p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
+          className="p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
           aria-label="Delete task"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

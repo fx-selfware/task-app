@@ -54,12 +54,12 @@ export function SortableParentCard({
     <div
       ref={setNodeRef}
       style={style}
-      className="group flex items-start gap-3 rounded-lg border bg-white p-3 shadow-sm"
+      className="group flex items-center gap-3 rounded-lg border bg-white p-3 shadow-sm"
     >
       {hasSubtasks && (
         <button
           onClick={onToggleCollapse}
-          className="mt-1 p-0.5 text-gray-400 hover:text-gray-600"
+          className="p-0.5 text-gray-400 hover:text-gray-600"
           aria-label={collapsed ? 'Expand subtasks' : 'Collapse subtasks'}
         >
           <span className="text-xs">{collapsed ? '▶' : '▼'}</span>
@@ -71,7 +71,7 @@ export function SortableParentCard({
           checked={false}
           onChange={canWrite ? onCheck : undefined}
           disabled={!canWrite}
-          className="mt-1 h-5 w-5 cursor-pointer rounded border-gray-300"
+          className="h-5 w-5 cursor-pointer rounded border-gray-300"
           aria-label={`Mark "${title}" as done`}
         />
       )}
@@ -84,10 +84,10 @@ export function SortableParentCard({
           <p className="mt-0.5 text-sm text-gray-500">{description}</p>
         )}
       </div>
-      {canWrite && hasSubtasks && (
+      {canWrite && (
         <button
           onClick={onAddSubtask}
-          className="mt-0.5 p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-blue-500"
+          className="p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-blue-500"
           aria-label="Add subtask"
           title="Add subtask"
         >
@@ -99,7 +99,7 @@ export function SortableParentCard({
       {canWrite && (
         <button
           onClick={onDelete}
-          className="mt-0.5 p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
+          className="p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
           aria-label="Delete task"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -117,7 +117,7 @@ export function SortableParentCard({
           {...attributes}
           {...listeners}
           style={{ touchAction: 'none' }}
-          className="mt-0.5 p-2 cursor-grab text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+          className="p-2 cursor-grab text-gray-300 hover:text-gray-500 active:cursor-grabbing"
           aria-label="Drag to reorder"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -168,7 +168,7 @@ export function SortableSubtaskCard({
     <div
       ref={setNodeRef}
       style={style}
-      className="group flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-2.5 shadow-sm"
+      className="group flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-2.5 shadow-sm"
     >
       {onCheck && (
         <input
@@ -176,7 +176,7 @@ export function SortableSubtaskCard({
           checked={false}
           onChange={canWrite ? onCheck : undefined}
           disabled={!canWrite}
-          className="mt-0.5 h-4 w-4 cursor-pointer rounded border-gray-300"
+          className="h-4 w-4 cursor-pointer rounded border-gray-300"
           aria-label={`Mark "${title}" as done`}
         />
       )}
