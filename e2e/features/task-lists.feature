@@ -80,13 +80,17 @@ Feature: Task Lists
     And I add a subtask named "Child Task" to "Parent Task"
     Then "Child Task" is visible in the task list
 
-  Scenario: Completing a parent task completes its subtasks
+  Scenario: Completing a parent task completes its subtasks and unchecking a subtask reopens the parent
     Given I have a task list named "Cascade List"
     When I open the task list "Cascade List"
     And I add a task named "Parent"
     And I add a subtask named "Sub1" to "Parent"
     And I check the checkbox for "Parent"
     Then the completed section shows 2 completed tasks
+    When I expand the completed section
+    And I uncheck the checkbox for "Sub1"
+    Then "Parent" is visible in the task list
+    And "Sub1" is visible in the task list
 
   Scenario: Subtasks are collapsible
     Given I have a task list named "Collapse List"

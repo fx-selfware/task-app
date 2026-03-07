@@ -25,6 +25,7 @@ export async function createTask(
       where: { id: effectiveParentId, taskListId, parentId: null },
     });
     if (!parent) httpError(400, 'Invalid parent task');
+    if (parent.status === 'DONE') httpError(400, 'Cannot add subtask to a completed task');
   }
 
   const maxOrder = await prisma.task.aggregate({
@@ -67,6 +68,18 @@ export async function updateTask(
         data: { status: 'DONE' },
       });
       return tx.task.update({ where: { id: taskId }, data });
+    });
+  }
+
+  // Un-completing a subtask also un-completes its parent
+  if (input.status === 'TODO' && task.parentId !== null) {
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.task.update({ where: { id: taskId }, data });
+      await tx.task.update({
+        where: { id: task.parentId! },
+        data: { status: 'TODO' },
+      });
+      return updated;
     });
   }
 

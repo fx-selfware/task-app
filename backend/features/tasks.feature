@@ -66,12 +66,22 @@ Feature: Tasks API
     Then the status is 200
     And all subtasks of "Parent Task" have status "DONE"
 
-  Scenario: Subtask status is independent from parent
+  Scenario: Completing a subtask does not complete the parent
     Given I have a task "Parent Task" in that list
     And I have a subtask "Sub A" under "Parent Task" in that list
     When I PATCH that task with body '{"status":"DONE"}' for "Sub A"
     Then the status is 200
     And task "Parent Task" still has status "TODO"
+
+  Scenario: Un-completing a subtask also un-completes its parent
+    Given I have a task "Parent Task" in that list
+    And I have a subtask "Sub A" under "Parent Task" in that list
+    When I PATCH that task with body '{"status":"DONE"}' for "Parent Task"
+    Then all subtasks of "Parent Task" have status "DONE"
+    When I PATCH that task with body '{"status":"TODO"}' for "Sub A"
+    Then the status is 200
+    And task "Parent Task" still has status "TODO"
+    And task "Sub A" still has status "TODO"
 
   Scenario: Deleting parent cascades to subtasks
     Given I have a task "Parent Task" in that list
@@ -86,6 +96,12 @@ Feature: Tasks API
     When I PUT reorder subtasks under "Parent" with reverse order
     Then the status is 200
     And the subtasks of "Parent" are in reverse order
+
+  Scenario: Cannot add subtask to a completed parent
+    Given I have a task "Parent" in that list
+    When I PATCH that task with body '{"status":"DONE"}' for "Parent"
+    And I POST a subtask with title "New Sub" under "Parent"
+    Then the status is 400
 
   Scenario: Delete completed subtasks of a parent
     Given I have a task "Parent" in that list
