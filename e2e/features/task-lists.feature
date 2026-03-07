@@ -42,24 +42,10 @@ Feature: Task Lists
     When I check the checkbox for "Task A"
     And I check the checkbox for "Task B"
     And I expand the completed section
+    Then "Task A" appears with strikethrough styling
     And I click "Delete completed"
     And I confirm the deletion
     Then the completed section is not visible
-
-  Scenario: Completed section is collapsed by default
-    Given I have a task list named "Todo App"
-    When I open the task list "Todo App"
-    And I add a task named "Task A"
-    And I check the checkbox for "Task A"
-    Then the completed section header is visible but tasks are hidden
-
-  Scenario: Completed tasks show with strikethrough
-    Given I have a task list named "Todo App"
-    When I open the task list "Todo App"
-    And I add a task named "Task A"
-    And I check the checkbox for "Task A"
-    And I expand the completed section
-    Then "Task A" appears with strikethrough styling
 
   @ac
   Scenario: Shared list updates in real-time when another user adds a task

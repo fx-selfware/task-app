@@ -7,12 +7,6 @@ const unique = () => `e2e_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 // Store generated unique emails across steps within a scenario
 const emailStore: Record<string, string> = {};
 
-Given('a user already exists with email {string}', async ({ request }, email: string) => {
-  await request.post('/api/auth/register', {
-    data: { email, password: 'password123', name: 'Existing User' },
-  });
-});
-
 Given('I am not logged in', async ({ page }) => {
   // Clear cookies to ensure unauthenticated state
   await page.context().clearCookies();
@@ -65,11 +59,6 @@ When('I click the logout button', async ({ page }) => {
   await page.click('button[title="Log out"]');
 });
 
-Given('I am on the login page', async ({ page }) => {
-  await page.context().clearCookies();
-  await page.goto('/login');
-});
-
 When(
   'I fill in email {string} and password {string}',
   async ({ page }, email: string, password: string) => {
@@ -84,10 +73,3 @@ When(
   },
 );
 
-Then('I remain on the login page', async ({ page }) => {
-  await expect(page).toHaveURL(/\/login/);
-});
-
-Then('I see an error message', async ({ page }) => {
-  await expect(page.locator('.text-red-700')).toBeVisible({ timeout: 3000 });
-});

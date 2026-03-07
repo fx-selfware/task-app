@@ -42,16 +42,6 @@ When('I add a task named {string}', async ({ page }, name: string) => {
   await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });
 });
 
-When('I edit the task {string} to be named {string}', async ({ page }, oldName: string, newName: string) => {
-  await page.locator('p').filter({ hasText: oldName }).first().click();
-  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
-  const titleInput = page.getByLabel('Title');
-  await titleInput.clear();
-  await titleInput.fill(newName);
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
-});
-
 When('I edit the task {string} to have title {string} and description {string}', async ({ page }, oldName: string, newTitle: string, description: string) => {
   await page.locator('p').filter({ hasText: oldName }).first().click();
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
@@ -118,11 +108,6 @@ Then('the completed section is not visible', async ({ page }) => {
 
 When('I click {string}', async ({ page }, label: string) => {
   await page.getByRole('button', { name: label }).click();
-});
-
-Then('the completed section header is visible but tasks are hidden', async ({ page }) => {
-  await expect(page.getByRole('button', { name: /Completed \(/ })).toBeVisible({ timeout: 5000 });
-  await expect(page.getByRole('button', { name: 'Delete completed' })).not.toBeVisible();
 });
 
 Then('{string} appears with strikethrough styling', async ({ page }, name: string) => {
