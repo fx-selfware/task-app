@@ -167,6 +167,22 @@ When('I add a subtask named {string} to {string}', async ({ page }, subName: str
   await expect(page.getByText(subName)).toBeVisible({ timeout: 5000 });
 });
 
+When('I start dragging {string}', async ({ page }, name: string) => {
+  const parentCard = page.locator('.space-y-2 > div').filter({ hasText: name }).first();
+  const dragHandle = parentCard.getByRole('button', { name: 'Drag to reorder' }).first();
+  await dragHandle.scrollIntoViewIfNeeded();
+  await dragHandle.waitFor({ state: 'visible' });
+  const box = await dragHandle.boundingBox();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  // Move enough to activate dnd-kit MouseSensor
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2 + 20);
+});
+
+When('I release the drag', async ({ page }) => {
+  await page.mouse.up();
+});
+
 When('I collapse the subtasks of {string}', async ({ page }, parentName: string) => {
   const collapseBtn = page.getByRole('button', { name: 'Collapse subtasks' });
   await collapseBtn.click();
