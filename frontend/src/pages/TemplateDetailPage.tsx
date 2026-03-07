@@ -246,7 +246,7 @@ export function TemplateDetailPage() {
                       onDelete={() => setDeleteTarget(task)}
                       onAddSubtask={() => openAddSubtask(task.id)}
                     />
-                    {hasSubtasks && !collapsed && activeDragId !== task.id && (
+                    {hasSubtasks && !collapsed && !activeDragId && (
                       <div className="ml-8 mt-1 space-y-1">
                         <SubtaskDndList
                           items={subtasks}

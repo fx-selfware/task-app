@@ -88,16 +88,21 @@ Feature: Task Lists
     When I expand the subtasks of "Parent"
     Then "Sub1" is visible in the task list
 
-  Scenario: Subtasks are hidden while dragging their parent task
+  Scenario: All subtasks are hidden while dragging a parent task
     Given I have a task list named "Drag Hide List"
     When I open the task list "Drag Hide List"
-    And I add a task named "Parent"
-    And I add a subtask named "Sub1" to "Parent"
+    And I add a task named "First"
+    And I add a subtask named "Sub1" to "First"
+    And I add a task named "Second"
+    And I add a subtask named "Sub2" to "Second"
     Then "Sub1" is visible in the task list
-    When I start dragging "Parent"
+    And "Sub2" is visible in the task list
+    When I start dragging "First"
     Then "Sub1" is no longer visible in the task list
+    And "Sub2" is no longer visible in the task list
     When I release the drag
     Then "Sub1" is visible in the task list
+    And "Sub2" is visible in the task list
 
   Scenario: The app displays a build version in the sidebar
     Then the sidebar shows a real build hash

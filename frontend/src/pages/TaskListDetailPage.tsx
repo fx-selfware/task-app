@@ -250,7 +250,7 @@ export function TaskListDetailPage() {
                         onEdit={() => openEdit(task)}
                         onAddSubtask={() => openAddSubtask(task.id)}
                       />
-                      {hasSubtasks && !collapsed && activeDragId !== task.id && (
+                      {hasSubtasks && !collapsed && !activeDragId && (
                         <div className="ml-8 mt-1 space-y-1">
                           <SubtaskDndList
                             items={todoSubs}
