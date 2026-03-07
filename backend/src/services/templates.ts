@@ -283,24 +283,27 @@ export async function applyTemplate(
       results.push(task);
     }
 
-    // Create subtasks
+    // Create subtasks (parallelized — independent across parents)
+    const subtaskCreates = [];
     for (const [templateParentId, subtasks] of subtasksByParent) {
       const newParentId = templateIdToTaskId.get(templateParentId);
       if (!newParentId) continue;
       for (let j = 0; j < subtasks.length; j++) {
         const st = subtasks[j];
-        const task = await tx.task.create({
-          data: {
-            title: st.title,
-            description: st.description,
-            order: j,
-            taskListId,
-            parentId: newParentId,
-          },
-        });
-        results.push(task);
+        subtaskCreates.push(
+          tx.task.create({
+            data: {
+              title: st.title,
+              description: st.description,
+              order: j,
+              taskListId,
+              parentId: newParentId,
+            },
+          }),
+        );
       }
     }
+    results.push(...(await Promise.all(subtaskCreates)));
 
     return results;
   });
