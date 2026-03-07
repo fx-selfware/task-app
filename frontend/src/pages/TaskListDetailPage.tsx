@@ -62,6 +62,7 @@ export function TaskListDetailPage() {
   const [editTaskDesc, setEditTaskDesc] = useState('');
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showDeleteCompleted, setShowDeleteCompleted] = useState(false);
 
   const doneCount = (data?.list?.tasks ?? []).filter((t) => t.status === 'DONE').length;
   useEffect(() => {
@@ -215,7 +216,7 @@ export function TaskListDetailPage() {
                 </button>
                 {showCompleted && canWrite && (
                   <button
-                    onClick={() => deleteCompletedTasks.mutate()}
+                    onClick={() => setShowDeleteCompleted(true)}
                     className="py-2 text-sm text-red-500 hover:text-red-700"
                   >
                     Delete completed
@@ -362,6 +363,19 @@ export function TaskListDetailPage() {
         title="Delete Task"
         message={`Delete "${deleteTarget?.title}"?`}
         loading={deleteTask.isPending}
+      />
+
+      {/* Delete completed tasks confirm */}
+      <ConfirmDialog
+        open={showDeleteCompleted}
+        onClose={() => setShowDeleteCompleted(false)}
+        onConfirm={async () => {
+          await deleteCompletedTasks.mutateAsync();
+          setShowDeleteCompleted(false);
+        }}
+        title="Delete Completed Tasks"
+        message={`Delete ${doneTasks.length} completed task(s)?`}
+        loading={deleteCompletedTasks.isPending}
       />
 
       {/* Delete list confirm */}

@@ -43,6 +43,7 @@ Feature: Task Lists
     And I check the checkbox for "Task B"
     And I expand the completed section
     And I click "Delete completed"
+    And I confirm the deletion
     Then the completed section is not visible
 
   Scenario: Completed section is collapsed by default
