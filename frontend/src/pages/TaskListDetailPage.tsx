@@ -71,7 +71,6 @@ export function TaskListDetailPage() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [showDeleteCompleted, setShowDeleteCompleted] = useState(false);
   const [collapsedParents, toggleCollapse] = useToggleSet();
-  const [showCompletedSubs, toggleCompletedSubs] = useToggleSet();
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [moveTarget, setMoveTarget] = useState<Task | null>(null);
 
@@ -83,7 +82,6 @@ export function TaskListDetailPage() {
   const tasks = data?.list?.tasks ?? [];
 
   // Count all done tasks (top-level + all done subtasks)
-  const doneTopLevel = tasks.filter((t) => t.status === 'DONE');
   const allDoneCount = tasks.reduce((sum, t) => {
     let count = t.status === 'DONE' ? 1 : 0;
     count += t.subtasks?.filter((s) => s.status === 'DONE').length ?? 0;
@@ -91,14 +89,35 @@ export function TaskListDetailPage() {
   }, 0);
 
   useEffect(() => {
-    if (doneTopLevel.length === 0) setShowCompleted(false);
-  }, [doneTopLevel.length]);
+    if (allDoneCount === 0) setShowCompleted(false);
+  }, [allDoneCount]);
 
   const todoTasks = localOrder
     ? localOrder.map((tid) => tasks.find((t) => t.id === tid)!).filter(Boolean)
     : tasks.filter((t) => t.status === 'TODO' || completingIds.has(t.id));
 
-  const doneTasks = tasks.filter((t) => t.status === 'DONE' && !completingIds.has(t.id));
+  // Build groups for the completed section
+  const completedGroups: { parent: Task; parentMode: 'completed' | 'readonly-header'; completedSubtasks: Task[] }[] = [];
+  for (const task of tasks) {
+    if (task.status === 'DONE' && !completingIds.has(task.id)) {
+      completedGroups.push({
+        parent: task,
+        parentMode: 'completed',
+        completedSubtasks: task.subtasks ?? [],
+      });
+    } else if (task.status === 'TODO') {
+      const doneSubs = (task.subtasks ?? []).filter(
+        (s) => s.status === 'DONE' && !completingIds.has(s.id)
+      );
+      if (doneSubs.length > 0) {
+        completedGroups.push({
+          parent: task,
+          parentMode: 'readonly-header',
+          completedSubtasks: doneSubs,
+        });
+      }
+    }
+  }
 
   // Detect newly appearing tasks for enter animation
   const todoIdKey = todoTasks.map((t) => t.id).join(',');
@@ -303,8 +322,8 @@ export function TaskListDetailPage() {
                 {todoTasks.map((task) => {
                   const subtasks = task.subtasks ?? [];
                   const todoSubs = subtasks.filter((s) => s.status === 'TODO' || completingIds.has(s.id));
-                  const doneSubs = subtasks.filter((s) => s.status === 'DONE' && !completingIds.has(s.id));
                   const hasSubtasks = subtasks.length > 0;
+                  const hasVisibleSubs = todoSubs.length > 0;
                   const collapsed = collapsedParents.has(task.id);
 
                   const parentMenu: MenuItem[] = [
@@ -332,7 +351,7 @@ export function TaskListDetailPage() {
                         title={task.title}
                         description={task.description}
                         canWrite={canWrite}
-                        hasSubtasks={hasSubtasks}
+                        hasSubtasks={hasVisibleSubs}
                         collapsed={collapsed}
                         onToggleCollapse={() => toggleCollapse(task.id)}
                         isCompleting={completingIds.has(task.id)}
@@ -340,7 +359,7 @@ export function TaskListDetailPage() {
                         menuItems={parentMenu}
                         onEdit={() => openEdit(task)}
                       />
-                      {hasSubtasks && !collapsed && !activeDragId && (
+                      {hasVisibleSubs && !collapsed && !activeDragId && (
                         <div className="ml-8 mt-1 space-y-1">
                           <SubtaskDndList
                             items={todoSubs}
@@ -376,29 +395,6 @@ export function TaskListDetailPage() {
                               </div>
                             )}
                           />
-                          {doneSubs.length > 0 && (
-                            <div className="mt-1">
-                              <button
-                                onClick={() => toggleCompletedSubs(task.id)}
-                                className="py-1 text-xs font-medium text-gray-500 hover:text-gray-700"
-                              >
-                                Completed ({doneSubs.length}) {showCompletedSubs.has(task.id) ? '▲' : '▶'}
-                              </button>
-                              {showCompletedSubs.has(task.id) && (
-                                <div className="mt-1 space-y-1">
-                                  {doneSubs.map((sub) => (
-                                    <CompletedTaskCard
-                                      key={sub.id}
-                                      task={sub}
-                                      canWrite={canWrite}
-                                      onUncheck={() => handleUncomplete(sub.id)}
-                                      onDelete={() => setDeleteTarget(sub)}
-                                    />
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
@@ -424,7 +420,7 @@ export function TaskListDetailPage() {
             </DragOverlay>
           </DndContext>
 
-          {doneTasks.length > 0 && (
+          {completedGroups.length > 0 && (
             <div className="mt-4">
               <button
                 onClick={() => setShowCompleted((v) => !v)}
@@ -434,17 +430,21 @@ export function TaskListDetailPage() {
               </button>
               {showCompleted && (
                 <div className="mt-2 space-y-2">
-                  {doneTasks.map((task) => (
-                    <div key={task.id}>
-                      <CompletedTaskCard
-                        task={task}
-                        canWrite={canWrite}
-                        onUncheck={() => handleUncomplete(task.id)}
-                        onDelete={() => setDeleteTarget(task)}
-                      />
-                      {task.subtasks && task.subtasks.length > 0 && (
+                  {completedGroups.map((group) => (
+                    <div key={group.parent.id}>
+                      {group.parentMode === 'completed' ? (
+                        <CompletedTaskCard
+                          task={group.parent}
+                          canWrite={canWrite}
+                          onUncheck={() => handleUncomplete(group.parent.id)}
+                          onDelete={() => setDeleteTarget(group.parent)}
+                        />
+                      ) : (
+                        <ReadonlyParentHeader task={group.parent} />
+                      )}
+                      {group.completedSubtasks.length > 0 && (
                         <div className="ml-8 mt-1 space-y-1">
-                          {task.subtasks.map((sub) => (
+                          {group.completedSubtasks.map((sub) => (
                             <CompletedTaskCard
                               key={sub.id}
                               task={sub}
@@ -682,6 +682,19 @@ function CompletedTaskCard({
           </svg>
         </button>
       )}
+    </div>
+  );
+}
+
+function ReadonlyParentHeader({ task }: { task: Task }) {
+  return (
+    <div data-testid="readonly-parent-header" className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-gray-400">{task.title}</p>
+        {task.description && (
+          <p className="mt-0.5 text-sm text-gray-400">{task.description}</p>
+        )}
+      </div>
     </div>
   );
 }

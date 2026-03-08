@@ -79,6 +79,21 @@ Feature: Task Lists
     Then "Parent" is visible in the task list
     And "Sub1" is visible in the task list
 
+  Scenario: Completing a subtask shows it in the bottom completed section under a readonly parent header
+    Given I have a task list named "SubComplete List"
+    When I open the task list "SubComplete List"
+    And I add a task named "Parent"
+    And I add a subtask named "Sub1" to "Parent"
+    And I add a subtask named "Sub2" to "Parent"
+    And I check the checkbox for "Sub1"
+    Then the completed section shows 1 completed task
+    When I expand the completed section
+    Then "Parent" appears as a readonly header in the completed section
+    And "Sub1" appears with strikethrough styling
+    When I uncheck the checkbox for "Sub1"
+    Then "Sub1" is visible in the task list
+    And the completed section is not visible
+
   Scenario: Subtasks are collapsible
     Given I have a task list named "Collapse List"
     When I open the task list "Collapse List"

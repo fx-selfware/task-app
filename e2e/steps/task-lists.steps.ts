@@ -215,6 +215,11 @@ When('I release the drag', async ({ page }) => {
   await page.mouse.up();
 });
 
+Then('{string} appears as a readonly header in the completed section', async ({ page }, name: string) => {
+  const header = page.getByTestId('readonly-parent-header').filter({ hasText: name });
+  await expect(header).toBeVisible({ timeout: 5000 });
+});
+
 When('I collapse the subtasks of {string}', async ({ page }, parentName: string) => {
   const collapseBtn = page.getByRole('button', { name: 'Collapse subtasks' });
   await collapseBtn.click();
