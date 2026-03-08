@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   DndContext,
@@ -76,6 +76,11 @@ export function TaskListDetailPage() {
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [moveTarget, setMoveTarget] = useState<Task | null>(null);
 
+  // Animation tracking
+  const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
+  const [enteringIds, setEnteringIds] = useState<Set<string>>(new Set());
+  const prevTodoIdsRef = useRef<Set<string>>(new Set());
+
   const tasks = data?.list?.tasks ?? [];
 
   // Count all done tasks (top-level + done subtasks)
@@ -90,6 +95,72 @@ export function TaskListDetailPage() {
   useEffect(() => {
     if (doneTopLevel.length === 0) setShowCompleted(false);
   }, [doneTopLevel.length]);
+
+  const todoTasks = localOrder
+    ? localOrder.map((tid) => tasks.find((t) => t.id === tid)!).filter(Boolean)
+    : tasks.filter((t) => t.status === 'TODO' || completingIds.has(t.id));
+
+  const doneTasks = tasks.filter((t) => t.status === 'DONE' && !completingIds.has(t.id));
+
+  // Detect newly appearing tasks for enter animation
+  const todoIdKey = todoTasks.map((t) => t.id).join(',');
+  useEffect(() => {
+    const prev = prevTodoIdsRef.current;
+    const currentIds = new Set(todoTasks.map((t) => t.id));
+    if (prev.size > 0) {
+      const newlyAppeared = new Set<string>();
+      for (const tid of currentIds) {
+        if (!prev.has(tid) && !completingIds.has(tid)) {
+          newlyAppeared.add(tid);
+        }
+      }
+      if (newlyAppeared.size > 0) {
+        setEnteringIds((s) => {
+          const next = new Set(s);
+          for (const tid of newlyAppeared) next.add(tid);
+          return next;
+        });
+      }
+    }
+    prevTodoIdsRef.current = currentIds;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todoIdKey]);
+
+  const handleComplete = useCallback((taskId: string) => {
+    setCompletingIds((s) => {
+      const next = new Set(s);
+      next.add(taskId);
+      // If parent, also mark TODO subtasks as completing
+      const task = tasks.find((t) => t.id === taskId);
+      if (task?.subtasks) {
+        for (const sub of task.subtasks) {
+          if (sub.status === 'TODO') next.add(sub.id);
+        }
+      }
+      return next;
+    });
+    updateTask.mutate({ taskId, data: { status: 'DONE' } });
+  }, [updateTask, tasks]);
+
+  const handleUncomplete = useCallback((taskId: string) => {
+    updateTask.mutate({ taskId, data: { status: 'TODO' } });
+  }, [updateTask]);
+
+  const handleExitAnimationEnd = useCallback((taskId: string) => {
+    setCompletingIds((s) => {
+      const next = new Set(s);
+      next.delete(taskId);
+      return next;
+    });
+  }, []);
+
+  const handleEnterAnimationEnd = useCallback((taskId: string) => {
+    setEnteringIds((s) => {
+      const next = new Set(s);
+      next.delete(taskId);
+      return next;
+    });
+  }, []);
 
   const sensors = useSensors(
     useSensor(MouseSensor),
@@ -106,12 +177,6 @@ export function TaskListDetailPage() {
 
   const { list, isOwner, permission } = data;
   const canWrite = permission === 'WRITE';
-
-  const todoTasks = localOrder
-    ? localOrder.map((tid) => tasks.find((t) => t.id === tid)!).filter(Boolean)
-    : tasks.filter((t) => t.status === 'TODO');
-
-  const doneTasks = tasks.filter((t) => t.status === 'DONE');
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -233,8 +298,8 @@ export function TaskListDetailPage() {
               <div className="space-y-2">
                 {todoTasks.map((task) => {
                   const subtasks = task.subtasks ?? [];
-                  const todoSubs = subtasks.filter((s) => s.status === 'TODO');
-                  const doneSubs = subtasks.filter((s) => s.status === 'DONE');
+                  const todoSubs = subtasks.filter((s) => s.status === 'TODO' || completingIds.has(s.id));
+                  const doneSubs = subtasks.filter((s) => s.status === 'DONE' && !completingIds.has(s.id));
                   const hasSubtasks = subtasks.length > 0;
                   const collapsed = collapsedParents.has(task.id);
 
@@ -247,7 +312,17 @@ export function TaskListDetailPage() {
                   ];
 
                   return (
-                    <div key={task.id}>
+                    <div
+                      key={task.id}
+                      className={
+                        completingIds.has(task.id) ? 'task-completing' :
+                        enteringIds.has(task.id) ? 'task-entering' : ''
+                      }
+                      onAnimationEnd={() => {
+                        if (completingIds.has(task.id)) handleExitAnimationEnd(task.id);
+                        if (enteringIds.has(task.id)) handleEnterAnimationEnd(task.id);
+                      }}
+                    >
                       <SortableParentCard
                         id={task.id}
                         title={task.title}
@@ -256,9 +331,8 @@ export function TaskListDetailPage() {
                         hasSubtasks={hasSubtasks}
                         collapsed={collapsed}
                         onToggleCollapse={() => toggleCollapse(task.id)}
-                        onCheck={() =>
-                          updateTask.mutate({ taskId: task.id, data: { status: 'DONE' } })
-                        }
+                        isCompleting={completingIds.has(task.id)}
+                        onCheck={() => handleComplete(task.id)}
                         menuItems={parentMenu}
                         onEdit={() => openEdit(task)}
                       />
@@ -271,21 +345,31 @@ export function TaskListDetailPage() {
                               await reorderTasks.mutateAsync({ orderedIds: ids, parentId: task.id });
                             }}
                             renderItem={(sub) => (
-                              <SortableSubtaskCard
+                              <div
                                 key={sub.id}
-                                id={sub.id}
-                                title={sub.title}
-                                description={sub.description}
-                                canWrite={canWrite}
-                                onCheck={() =>
-                                  updateTask.mutate({ taskId: sub.id, data: { status: 'DONE' } })
+                                className={
+                                  completingIds.has(sub.id) ? 'task-completing' :
+                                  enteringIds.has(sub.id) ? 'task-entering' : ''
                                 }
-                                menuItems={[
-                                  { label: 'Move to top', onClick: () => moveTask.mutate({ taskId: sub.id, parentId: null }) },
-                                  { label: 'Delete', onClick: () => setDeleteTarget(sub), variant: 'danger' as const },
-                                ]}
-                                onEdit={() => openEdit(sub)}
-                              />
+                                onAnimationEnd={() => {
+                                  if (completingIds.has(sub.id)) handleExitAnimationEnd(sub.id);
+                                  if (enteringIds.has(sub.id)) handleEnterAnimationEnd(sub.id);
+                                }}
+                              >
+                                <SortableSubtaskCard
+                                  id={sub.id}
+                                  title={sub.title}
+                                  description={sub.description}
+                                  canWrite={canWrite}
+                                  isCompleting={completingIds.has(sub.id)}
+                                  onCheck={() => handleComplete(sub.id)}
+                                  menuItems={[
+                                    { label: 'Move to top', onClick: () => moveTask.mutate({ taskId: sub.id, parentId: null }) },
+                                    { label: 'Delete', onClick: () => setDeleteTarget(sub), variant: 'danger' as const },
+                                  ]}
+                                  onEdit={() => openEdit(sub)}
+                                />
+                              </div>
                             )}
                           />
                           {doneSubs.length > 0 && (
@@ -313,9 +397,7 @@ export function TaskListDetailPage() {
                                       key={sub.id}
                                       task={sub}
                                       canWrite={canWrite}
-                                      onUncheck={() =>
-                                        updateTask.mutate({ taskId: sub.id, data: { status: 'TODO' } })
-                                      }
+                                      onUncheck={() => handleUncomplete(sub.id)}
                                       onDelete={() => setDeleteTarget(sub)}
                                     />
                                   ))}
@@ -357,9 +439,7 @@ export function TaskListDetailPage() {
                       <CompletedTaskCard
                         task={task}
                         canWrite={canWrite}
-                        onUncheck={() =>
-                          updateTask.mutate({ taskId: task.id, data: { status: 'TODO' } })
-                        }
+                        onUncheck={() => handleUncomplete(task.id)}
                         onDelete={() => setDeleteTarget(task)}
                       />
                       {task.subtasks && task.subtasks.length > 0 && (
@@ -369,9 +449,7 @@ export function TaskListDetailPage() {
                               key={sub.id}
                               task={sub}
                               canWrite={canWrite}
-                              onUncheck={() =>
-                                updateTask.mutate({ taskId: sub.id, data: { status: 'TODO' } })
-                              }
+                              onUncheck={() => handleUncomplete(sub.id)}
                               onDelete={() => setDeleteTarget(sub)}
                             />
                           ))}

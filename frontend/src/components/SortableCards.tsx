@@ -27,6 +27,7 @@ interface SortableParentCardProps {
   menuItems?: MenuItem[];
   onEdit: () => void;
   onCheck?: () => void;
+  isCompleting?: boolean;
 }
 
 export function SortableParentCard({
@@ -40,6 +41,7 @@ export function SortableParentCard({
   menuItems,
   onEdit,
   onCheck,
+  isCompleting,
 }: SortableParentCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id, disabled: !canWrite });
@@ -68,20 +70,20 @@ export function SortableParentCard({
       {onCheck && (
         <input
           type="checkbox"
-          checked={false}
-          onChange={canWrite ? onCheck : undefined}
-          disabled={!canWrite}
+          checked={!!isCompleting}
+          onChange={canWrite && !isCompleting ? onCheck : undefined}
+          disabled={!canWrite || !!isCompleting}
           className="h-5 w-5 cursor-pointer rounded border-gray-300"
           aria-label={`Mark "${title}" as done`}
         />
       )}
       <div
-        className={`flex-1 min-w-0 ${canWrite ? 'cursor-pointer' : ''}`}
-        onClick={canWrite ? onEdit : undefined}
+        className={`flex-1 min-w-0 ${canWrite && !isCompleting ? 'cursor-pointer' : ''}`}
+        onClick={canWrite && !isCompleting ? onEdit : undefined}
       >
-        <p className="font-medium text-gray-900">{title}</p>
+        <p className={`font-medium ${isCompleting ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{title}</p>
         {description && (
-          <p className="mt-0.5 text-sm text-gray-500">{description}</p>
+          <p className={`mt-0.5 text-sm ${isCompleting ? 'text-gray-400 line-through' : 'text-gray-500'}`}>{description}</p>
         )}
       </div>
       {canWrite && menuItems && menuItems.length > 0 && (
@@ -121,6 +123,7 @@ interface SortableSubtaskCardProps {
   menuItems?: MenuItem[];
   onEdit: () => void;
   onCheck?: () => void;
+  isCompleting?: boolean;
 }
 
 export function SortableSubtaskCard({
@@ -131,6 +134,7 @@ export function SortableSubtaskCard({
   menuItems,
   onEdit,
   onCheck,
+  isCompleting,
 }: SortableSubtaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id, disabled: !canWrite });
@@ -150,20 +154,20 @@ export function SortableSubtaskCard({
       {onCheck && (
         <input
           type="checkbox"
-          checked={false}
-          onChange={canWrite ? onCheck : undefined}
-          disabled={!canWrite}
+          checked={!!isCompleting}
+          onChange={canWrite && !isCompleting ? onCheck : undefined}
+          disabled={!canWrite || !!isCompleting}
           className="h-4 w-4 cursor-pointer rounded border-gray-300"
           aria-label={`Mark "${title}" as done`}
         />
       )}
       <div
-        className={`flex-1 min-w-0 ${canWrite ? 'cursor-pointer' : ''}`}
-        onClick={canWrite ? onEdit : undefined}
+        className={`flex-1 min-w-0 ${canWrite && !isCompleting ? 'cursor-pointer' : ''}`}
+        onClick={canWrite && !isCompleting ? onEdit : undefined}
       >
-        <p className="text-sm font-medium text-gray-800">{title}</p>
+        <p className={`text-sm font-medium ${isCompleting ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{title}</p>
         {description && (
-          <p className="mt-0.5 text-xs text-gray-500">{description}</p>
+          <p className={`mt-0.5 text-xs ${isCompleting ? 'text-gray-400 line-through' : 'text-gray-500'}`}>{description}</p>
         )}
       </div>
       {canWrite && menuItems && menuItems.length > 0 && (
