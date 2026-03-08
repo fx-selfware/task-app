@@ -9,6 +9,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  MeasuringStrategy,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -223,6 +224,7 @@ export function TemplateDetailPage() {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          measuring={{ droppable: { strategy: MeasuringStrategy.WhileDragging } }}
           onDragStart={(event) => setActiveDragId(event.active.id as string)}
           onDragEnd={(event) => { setActiveDragId(null); handleDragEnd(event); }}
           onDragCancel={() => setActiveDragId(null)}
