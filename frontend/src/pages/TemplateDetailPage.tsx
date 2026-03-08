@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useLayoutEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   DndContext,
@@ -78,7 +78,15 @@ export function TemplateDetailPage() {
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
   const [collapsedParents, toggleCollapse] = useToggleSet();
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const preCollapseTopRef = useRef(0);
+  const [dragYOffset, setDragYOffset] = useState(0);
   const [moveTarget, setMoveTarget] = useState<TemplateTask | null>(null);
+
+  useLayoutEffect(() => {
+    if (!activeDragId) { setDragYOffset(0); return; }
+    const el = document.querySelector(`[data-sortable-id="${activeDragId}"]`);
+    if (el) setDragYOffset(preCollapseTopRef.current - el.getBoundingClientRect().top);
+  }, [activeDragId]);
 
   const sensors = useSensors(
     useSensor(MouseSensor),
@@ -224,7 +232,11 @@ export function TemplateDetailPage() {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          onDragStart={(event) => setActiveDragId(event.active.id as string)}
+          onDragStart={(event) => {
+            const el = document.querySelector(`[data-sortable-id="${event.active.id}"]`);
+            preCollapseTopRef.current = el?.getBoundingClientRect().top ?? 0;
+            setActiveDragId(event.active.id as string);
+          }}
           onDragEnd={(event) => { setActiveDragId(null); handleDragEnd(event); }}
           onDragCancel={() => setActiveDragId(null)}
         >
@@ -259,11 +271,8 @@ export function TemplateDetailPage() {
                       onEdit={() => openEdit(task)}
                       menuItems={parentMenu}
                     />
-                    {hasSubtasks && !collapsed && (
-                      <div
-                        className="ml-8 mt-1 space-y-1"
-                        style={activeDragId ? { opacity: 0.3, pointerEvents: 'none' } : undefined}
-                      >
+                    {hasSubtasks && !collapsed && !activeDragId && (
+                      <div className="ml-8 mt-1 space-y-1">
                         <SubtaskDndList
                           items={subtasks}
                           sensors={sensors}
@@ -297,7 +306,7 @@ export function TemplateDetailPage() {
               const t = tasks.find((x) => x.id === activeDragId);
               if (!t) return null;
               return (
-                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 shadow-lg">
+                <div style={dragYOffset ? { transform: `translateY(${dragYOffset}px)` } : undefined} className="flex items-center gap-3 rounded-lg border bg-white p-3 shadow-lg">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900">{t.title}</p>
                     {t.description && (

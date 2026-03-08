@@ -233,17 +233,6 @@ Then('{string} appears as a readonly header in the completed section', async ({ 
   await expect(header).toBeVisible({ timeout: 5000 });
 });
 
-Then('the subtask area of {string} is dimmed', async ({ page }, parentName: string) => {
-  const parentCard = page.locator('.space-y-2 > div').filter({ hasText: parentName }).first();
-  const subtaskArea = parentCard.locator('.ml-8').first();
-  await expect(subtaskArea).toHaveCSS('opacity', '0.3', { timeout: 3000 });
-});
-
-Then('the subtask area of {string} is not dimmed', async ({ page }, parentName: string) => {
-  const parentCard = page.locator('.space-y-2 > div').filter({ hasText: parentName }).first();
-  const subtaskArea = parentCard.locator('.ml-8').first();
-  await expect(subtaskArea).not.toHaveCSS('opacity', '0.3', { timeout: 3000 });
-});
 
 When('I collapse the subtasks of {string}', async ({ page }, parentName: string) => {
   const collapseBtn = page.getByRole('button', { name: 'Collapse subtasks' });

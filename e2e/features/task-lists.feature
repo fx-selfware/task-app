@@ -119,9 +119,9 @@ Feature: Task Lists
     Then the drag overlay is within 50px of the mouse vertically
     When I release the drag
 
-  Scenario: Subtasks are dimmed while dragging a parent task
-    Given I have a task list named "Drag Dim List"
-    When I open the task list "Drag Dim List"
+  Scenario: All subtasks are hidden while dragging a parent task
+    Given I have a task list named "Drag Hide List"
+    When I open the task list "Drag Hide List"
     And I add a task named "First"
     And I add a subtask named "Sub1" to "First"
     And I add a task named "Second"
@@ -129,11 +129,11 @@ Feature: Task Lists
     Then "Sub1" is visible in the task list
     And "Sub2" is visible in the task list
     When I start dragging "First"
-    Then the subtask area of "First" is dimmed
-    And the subtask area of "Second" is dimmed
+    Then "Sub1" is no longer visible in the task list
+    And "Sub2" is no longer visible in the task list
     When I release the drag
-    Then the subtask area of "First" is not dimmed
-    And the subtask area of "Second" is not dimmed
+    Then "Sub1" is visible in the task list
+    And "Sub2" is visible in the task list
 
   @ac
   Scenario: A user can promote a subtask to a top-level task

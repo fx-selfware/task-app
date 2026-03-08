@@ -56,6 +56,7 @@ export function SortableParentCard({
     <div
       ref={setNodeRef}
       style={style}
+      data-sortable-id={id}
       className="group flex items-center gap-3 rounded-lg border bg-white p-3 shadow-sm"
     >
       {hasSubtasks && (

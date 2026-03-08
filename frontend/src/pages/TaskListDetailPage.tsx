@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   DndContext,
@@ -71,6 +71,8 @@ export function TaskListDetailPage() {
   const [showDeleteCompleted, setShowDeleteCompleted] = useState(false);
   const [collapsedParents, toggleCollapse] = useToggleSet();
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const preCollapseTopRef = useRef(0);
+  const [dragYOffset, setDragYOffset] = useState(0);
   const [moveTarget, setMoveTarget] = useState<Task | null>(null);
 
   // Animation tracking
@@ -90,6 +92,14 @@ export function TaskListDetailPage() {
   useEffect(() => {
     if (allDoneCount === 0) setShowCompleted(false);
   }, [allDoneCount]);
+
+  // Compensate DragOverlay position for the layout shift when subtasks collapse.
+  // Runs after DOM commit but before paint, so the user never sees the wrong position.
+  useLayoutEffect(() => {
+    if (!activeDragId) { setDragYOffset(0); return; }
+    const el = document.querySelector(`[data-sortable-id="${activeDragId}"]`);
+    if (el) setDragYOffset(preCollapseTopRef.current - el.getBoundingClientRect().top);
+  }, [activeDragId]);
 
   const todoTasks = localOrder
     ? localOrder.map((tid) => tasks.find((t) => t.id === tid)!).filter(Boolean)
@@ -308,7 +318,11 @@ export function TaskListDetailPage() {
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragStart={(event) => setActiveDragId(event.active.id as string)}
+            onDragStart={(event) => {
+              const el = document.querySelector(`[data-sortable-id="${event.active.id}"]`);
+              preCollapseTopRef.current = el?.getBoundingClientRect().top ?? 0;
+              setActiveDragId(event.active.id as string);
+            }}
             onDragEnd={(event) => { setActiveDragId(null); handleDragEnd(event); }}
             onDragCancel={() => setActiveDragId(null)}
           >
@@ -357,11 +371,8 @@ export function TaskListDetailPage() {
                         menuItems={parentMenu}
                         onEdit={() => openEdit(task)}
                       />
-                      {hasVisibleSubs && !collapsed && (
-                        <div
-                          className="ml-8 mt-1 space-y-1"
-                          style={activeDragId ? { opacity: 0.3, pointerEvents: 'none' } : undefined}
-                        >
+                      {hasVisibleSubs && !collapsed && !activeDragId && (
+                        <div className="ml-8 mt-1 space-y-1">
                           <SubtaskDndList
                             items={todoSubs}
                             sensors={sensors}
@@ -408,7 +419,7 @@ export function TaskListDetailPage() {
                 const t = todoTasks.find((x) => x.id === activeDragId);
                 if (!t) return null;
                 return (
-                  <div data-testid="drag-overlay" className="flex items-center gap-3 rounded-lg border bg-white p-3 shadow-lg">
+                  <div data-testid="drag-overlay" style={dragYOffset ? { transform: `translateY(${dragYOffset}px)` } : undefined} className="flex items-center gap-3 rounded-lg border bg-white p-3 shadow-lg">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900">{t.title}</p>
                       {t.description && (
