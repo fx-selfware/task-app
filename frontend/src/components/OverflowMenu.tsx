@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-interface MenuItem {
+export interface MenuItem {
   label: string;
   onClick: () => void;
   variant?: 'default' | 'danger';

@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { requireAuth } from '../middleware/requireAuth';
 import { checkWriteAccess } from '../services/taskLists';
-import { createTask, updateTask, deleteTask, reorderTasks, deleteCompletedTasks, deleteCompletedSubtasks } from '../services/tasks';
+import { createTask, updateTask, deleteTask, moveTask, reorderTasks, deleteCompletedTasks, deleteCompletedSubtasks } from '../services/tasks';
 import { publish } from '../services/events';
 
 export async function taskRoutes(app: FastifyInstance) {
@@ -38,6 +38,24 @@ export async function taskRoutes(app: FastifyInstance) {
 
       await checkWriteAccess(app.prisma, id, request.user.userId);
       const task = await updateTask(app.prisma, id, tid, body);
+      publish(id);
+      return reply.send({ task });
+    },
+  );
+
+  app.patch(
+    '/task-lists/:id/tasks/:tid/move',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { id, tid } = request.params as { id: string; tid: string };
+      const { parentId } = request.body as { parentId: string | null };
+
+      if (parentId === undefined) {
+        return reply.status(400).send({ error: 'parentId is required (string or null)' });
+      }
+
+      await checkWriteAccess(app.prisma, id, request.user.userId);
+      const task = await moveTask(app.prisma, id, tid, parentId);
       publish(id);
       return reply.send({ task });
     },

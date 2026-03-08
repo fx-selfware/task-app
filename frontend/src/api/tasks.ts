@@ -22,6 +22,9 @@ export const tasksApi = {
       parentId: parentId ?? null,
     }),
 
+  move: (listId: string, taskId: string, parentId: string | null) =>
+    api.patch<{ task: Task }>(`/task-lists/${listId}/tasks/${taskId}/move`, { parentId }),
+
   deleteCompleted: (listId: string) =>
     api.delete<void>(`/task-lists/${listId}/tasks/completed`),
 

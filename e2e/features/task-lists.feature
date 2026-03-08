@@ -104,5 +104,27 @@ Feature: Task Lists
     Then "Sub1" is visible in the task list
     And "Sub2" is visible in the task list
 
+  @ac
+  Scenario: A user can promote a subtask to a top-level task
+    Given I have a task list named "Promote List"
+    When I open the task list "Promote List"
+    And I add a task named "Parent"
+    And I add a subtask named "Child" to "Parent"
+    And I open the task menu for "Child"
+    And I click the menu item "Move to top"
+    Then "Child" is visible in the task list
+    And "Child" is a top-level task after "Parent"
+
+  @ac
+  Scenario: A user can demote a top-level task under another task
+    Given I have a task list named "Demote List"
+    When I open the task list "Demote List"
+    And I add a task named "Target Parent"
+    And I add a task named "Orphan Task"
+    And I open the task menu for "Orphan Task"
+    And I click the menu item "Move under..."
+    And I select "Target Parent" in the move modal
+    Then "Orphan Task" is visible as a subtask of "Target Parent"
+
   Scenario: The app displays a build version in the sidebar
     Then the sidebar shows a real build hash

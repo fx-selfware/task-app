@@ -25,6 +25,6 @@ Feature: Mobile layout
     Then "Buy groceries" is visible in the task list
 
 @touch-only
-Scenario: The delete button is always visible on a touch device without hovering
+Scenario: The task actions menu is always visible on a touch device without hovering
   Given I have a task list with tasks "Alpha" and "Beta" ready to view
-  Then the delete button is visible without hovering
+  Then the task actions button is visible without hovering

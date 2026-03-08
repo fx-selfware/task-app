@@ -186,6 +186,65 @@ export async function deleteTemplateTask(
   await prisma.templateTask.delete({ where: { id: taskId } });
 }
 
+export async function moveTemplateTask(
+  prisma: PrismaClient,
+  templateId: string,
+  taskId: string,
+  userId: string,
+  newParentId: string | null,
+) {
+  await requireWriteAccess(prisma, templateId, userId);
+
+  return prisma.$transaction(async (tx) => {
+    const task = await tx.templateTask.findFirst({
+      where: { id: taskId, templateId },
+      include: { subtasks: { select: { id: true } } },
+    });
+    if (!task) return httpError(404, 'Not found');
+    if (task.parentId === newParentId) return task;
+
+    if (newParentId !== null) {
+      // --- DEMOTE: top-level → subtask ---
+      if (task.parentId !== null) return httpError(400, 'Task is already a subtask');
+      if (task.subtasks.length > 0) return httpError(400, 'Cannot move a task that has subtasks');
+      if (newParentId === taskId) return httpError(400, 'Cannot move task under itself');
+
+      const newParent = await tx.templateTask.findFirst({
+        where: { id: newParentId, templateId, parentId: null },
+      });
+      if (!newParent) return httpError(400, 'Invalid parent task');
+
+      const maxSubOrder = await tx.templateTask.aggregate({
+        where: { templateId, parentId: newParentId },
+        _max: { order: true },
+      });
+
+      return tx.templateTask.update({
+        where: { id: taskId },
+        data: { parentId: newParentId, order: (maxSubOrder._max.order ?? -1) + 1 },
+      });
+    } else {
+      // --- PROMOTE: subtask → top-level ---
+      if (task.parentId === null) return httpError(400, 'Task is already top-level');
+
+      const formerParent = await tx.templateTask.findFirst({
+        where: { id: task.parentId, templateId },
+      });
+      if (!formerParent) return httpError(404, 'Parent not found');
+
+      await tx.templateTask.updateMany({
+        where: { templateId, parentId: null, order: { gt: formerParent.order } },
+        data: { order: { increment: 1 } },
+      });
+
+      return tx.templateTask.update({
+        where: { id: taskId },
+        data: { parentId: null, order: formerParent.order + 1 },
+      });
+    }
+  });
+}
+
 export async function reorderTemplateTasks(
   prisma: PrismaClient,
   templateId: string,

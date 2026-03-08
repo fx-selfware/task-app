@@ -157,13 +157,45 @@ Then(
 // --- Subtask steps ---
 
 When('I add a subtask named {string} to {string}', async ({ page }, subName: string, parentName: string) => {
-  // Click the "+" add-subtask icon on the parent task card
+  // Open the overflow menu on the parent card, then click "Add subtask"
   const parentCard = page.locator('.group').filter({ hasText: parentName }).first();
-  await parentCard.getByRole('button', { name: 'Add subtask' }).click();
+  await parentCard.getByRole('button', { name: 'Task actions' }).click();
+  await page.getByRole('menuitem', { name: 'Add subtask' }).click();
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
   await page.getByLabel('Title').fill(subName);
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
+  await expect(page.getByText(subName)).toBeVisible({ timeout: 5000 });
+});
+
+When('I open the task menu for {string}', async ({ page }, name: string) => {
+  const card = page.locator('.group').filter({ hasText: name }).first();
+  await card.getByRole('button', { name: 'Task actions' }).click();
+});
+
+When('I click the menu item {string}', async ({ page }, label: string) => {
+  await page.getByRole('menuitem', { name: label }).click();
+});
+
+When('I select {string} in the move modal', async ({ page }, parentName: string) => {
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible({ timeout: 3000 });
+  await dialog.getByText(parentName, { exact: true }).click();
+  await expect(dialog).not.toBeVisible({ timeout: 5000 });
+});
+
+Then('{string} is a top-level task after {string}', async ({ page }, name: string, afterName: string) => {
+  // Wait for the promoted task to appear as a top-level task
+  await page.waitForTimeout(500);
+  const cards = page.locator('.space-y-2').first().locator('> div');
+  const allTexts = await cards.allTextContents();
+  const beforeIdx = allTexts.findIndex((t) => t.includes(afterName));
+  const afterIdx = allTexts.findIndex((t) => t.includes(name));
+  expect(afterIdx).toBeGreaterThan(beforeIdx);
+});
+
+Then('{string} is visible as a subtask of {string}', async ({ page }, subName: string, parentName: string) => {
+  // After demoting, the subtask should appear under the parent's subtask area
   await expect(page.getByText(subName)).toBeVisible({ timeout: 5000 });
 });
 

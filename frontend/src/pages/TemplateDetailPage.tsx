@@ -23,6 +23,7 @@ import {
   useUpdateTemplateTask,
   useDeleteTemplateTask,
   useApplyTemplate,
+  useMoveTemplateTask,
   useReorderTemplateTasks,
 } from '../hooks/useTemplates';
 import { useTemplateEvents } from '../hooks/useTemplateEvents';
@@ -35,8 +36,10 @@ import { Spinner } from '../components/Spinner';
 import { TemplateSharesModal } from './TemplateSharesModal';
 import { OverflowMenu } from '../components/OverflowMenu';
 import { SortableParentCard, SortableSubtaskCard, SubtaskDndList } from '../components/SortableCards';
+import { MoveTaskModal } from './MoveTaskModal';
 import { useToggleSet } from '../hooks/useToggleSet';
 import type { TemplateTask } from '../types';
+import type { MenuItem } from '../components/OverflowMenu';
 
 export function TemplateDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -51,6 +54,7 @@ export function TemplateDetailPage() {
   const updateTask = useUpdateTemplateTask(id!);
   const deleteTask = useDeleteTemplateTask(id!);
   const applyTemplate = useApplyTemplate();
+  const moveTemplateTask = useMoveTemplateTask(id!);
   const reorderTasks = useReorderTemplateTasks(id!);
   const { data: listsData } = useTaskLists();
 
@@ -73,6 +77,7 @@ export function TemplateDetailPage() {
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
   const [collapsedParents, toggleCollapse] = useToggleSet();
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [moveTarget, setMoveTarget] = useState<TemplateTask | null>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor),
@@ -232,6 +237,14 @@ export function TemplateDetailPage() {
                 const hasSubtasks = subtasks.length > 0;
                 const collapsed = collapsedParents.has(task.id);
 
+                const parentMenu: MenuItem[] = [
+                  { label: 'Add subtask', onClick: () => openAddSubtask(task.id) },
+                  ...(!hasSubtasks
+                    ? [{ label: 'Move under...', onClick: () => setMoveTarget(task) }]
+                    : []),
+                  { label: 'Delete', onClick: () => setDeleteTarget(task), variant: 'danger' as const },
+                ];
+
                 return (
                   <div key={task.id}>
                     <SortableParentCard
@@ -243,8 +256,7 @@ export function TemplateDetailPage() {
                       collapsed={collapsed}
                       onToggleCollapse={() => toggleCollapse(task.id)}
                       onEdit={() => openEdit(task)}
-                      onDelete={() => setDeleteTarget(task)}
-                      onAddSubtask={() => openAddSubtask(task.id)}
+                      menuItems={parentMenu}
                     />
                     {hasSubtasks && !collapsed && !activeDragId && (
                       <div className="ml-8 mt-1 space-y-1">
@@ -262,7 +274,10 @@ export function TemplateDetailPage() {
                               description={sub.description}
                               canWrite={canWrite}
                               onEdit={() => openEdit(sub)}
-                              onDelete={() => setDeleteTarget(sub)}
+                              menuItems={[
+                                { label: 'Move to top', onClick: () => moveTemplateTask.mutate({ taskId: sub.id, parentId: null }) },
+                                { label: 'Delete', onClick: () => setDeleteTarget(sub), variant: 'danger' as const },
+                              ]}
                             />
                           )}
                         />
@@ -439,6 +454,24 @@ export function TemplateDetailPage() {
           )}
         </form>
       </Modal>
+
+      {/* Move task modal */}
+      <MoveTaskModal
+        open={!!moveTarget}
+        onClose={() => setMoveTarget(null)}
+        eligibleParents={
+          moveTarget
+            ? tasks.filter((t) => t.id !== moveTarget.id)
+            : []
+        }
+        onSelect={async (parentId) => {
+          if (moveTarget) {
+            await moveTemplateTask.mutateAsync({ taskId: moveTarget.id, parentId });
+            setMoveTarget(null);
+          }
+        }}
+        loading={moveTemplateTask.isPending}
+      />
 
       {/* Shares modal */}
       <TemplateSharesModal

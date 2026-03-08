@@ -250,6 +250,59 @@ When(
   },
 );
 
+// --- Move template task steps ---
+
+When(
+  'I move template task {string} to top-level',
+  async function (this: AppWorld, title: string) {
+    const taskId = this.tasksByTitle[title];
+    await this.request('PATCH', `/api/templates/${this.templateId}/tasks/${taskId}/move`, {
+      payload: { parentId: null },
+      cookie: this.myCookie,
+    });
+  },
+);
+
+When(
+  'I move template task {string} under {string}',
+  async function (this: AppWorld, title: string, parentTitle: string) {
+    const taskId = this.tasksByTitle[title];
+    const parentId = this.tasksByTitle[parentTitle];
+    await this.request('PATCH', `/api/templates/${this.templateId}/tasks/${taskId}/move`, {
+      payload: { parentId },
+      cookie: this.myCookie,
+    });
+  },
+);
+
+Then(
+  'the template top-level order is {string}, {string}, {string}, {string}',
+  async function (this: AppWorld, t1: string, t2: string, t3: string, t4: string) {
+    const res = await this.app.inject({
+      method: 'GET',
+      url: `/api/templates/${this.templateId}`,
+      headers: { cookie: this.myCookie },
+    });
+    const titles = res.json().template.tasks.map((t: any) => t.title);
+    expect(titles).to.deep.equal([t1, t2, t3, t4]);
+  },
+);
+
+Then(
+  'template task {string} is a subtask of {string}',
+  async function (this: AppWorld, childTitle: string, parentTitle: string) {
+    const res = await this.app.inject({
+      method: 'GET',
+      url: `/api/templates/${this.templateId}`,
+      headers: { cookie: this.myCookie },
+    });
+    const parent = res.json().template.tasks.find((t: any) => t.title === parentTitle);
+    expect(parent).to.exist;
+    const child = (parent.subtasks ?? []).find((s: any) => s.title === childTitle);
+    expect(child).to.exist;
+  },
+);
+
 // --- Template subtask steps ---
 
 When(

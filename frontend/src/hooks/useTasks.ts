@@ -69,6 +69,17 @@ export function useReorderTasks(listId: string) {
   });
 }
 
+export function useMoveTask(listId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, parentId }: { taskId: string; parentId: string | null }) =>
+      tasksApi.move(listId, taskId, parentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
+    },
+  });
+}
+
 export function useDeleteCompletedSubtasks(listId: string) {
   const queryClient = useQueryClient();
   return useMutation({

@@ -28,9 +28,9 @@ When(
   },
 );
 
-Then('the delete button is visible without hovering', async ({ page }) => {
-  const deleteButton = page.getByRole('button', { name: 'Delete task' }).first();
-  await expect(deleteButton).toBeVisible({ timeout: 3000 });
+Then('the task actions button is visible without hovering', async ({ page }) => {
+  const actionsButton = page.getByRole('button', { name: 'Task actions' }).first();
+  await expect(actionsButton).toBeVisible({ timeout: 3000 });
 });
 
 When('I drag {string} above {string}', async ({ page }, item: string, target: string) => {

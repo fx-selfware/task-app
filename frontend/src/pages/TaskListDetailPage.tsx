@@ -21,6 +21,7 @@ import {
   useCreateTask,
   useUpdateTask,
   useDeleteTask,
+  useMoveTask,
   useReorderTasks,
   useDeleteCompletedTasks,
   useDeleteCompletedSubtasks,
@@ -34,8 +35,10 @@ import { SharesModal } from './SharesModal';
 import { OverflowMenu } from '../components/OverflowMenu';
 import { useTaskListEvents } from '../hooks/useTaskListEvents';
 import { SortableParentCard, SortableSubtaskCard, SubtaskDndList } from '../components/SortableCards';
+import { MoveTaskModal } from './MoveTaskModal';
 import { useToggleSet } from '../hooks/useToggleSet';
 import type { Task } from '../types';
+import type { MenuItem } from '../components/OverflowMenu';
 
 export function TaskListDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -48,6 +51,7 @@ export function TaskListDetailPage() {
   const deleteTask = useDeleteTask(id!);
   const reorderTasks = useReorderTasks(id!);
   const deleteCompletedTasks = useDeleteCompletedTasks(id!);
+  const moveTask = useMoveTask(id!);
   const deleteCompletedSubtasks = useDeleteCompletedSubtasks(id!);
   useTaskListEvents(id!);
 
@@ -70,6 +74,7 @@ export function TaskListDetailPage() {
   const [showCompletedSubs, toggleCompletedSubs] = useToggleSet();
   const [deleteCompletedSubsTarget, setDeleteCompletedSubsTarget] = useState<string | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [moveTarget, setMoveTarget] = useState<Task | null>(null);
 
   const tasks = data?.list?.tasks ?? [];
 
@@ -233,6 +238,14 @@ export function TaskListDetailPage() {
                   const hasSubtasks = subtasks.length > 0;
                   const collapsed = collapsedParents.has(task.id);
 
+                  const parentMenu: MenuItem[] = [
+                    { label: 'Add subtask', onClick: () => openAddSubtask(task.id) },
+                    ...(!hasSubtasks
+                      ? [{ label: 'Move under...', onClick: () => setMoveTarget(task) }]
+                      : []),
+                    { label: 'Delete', onClick: () => setDeleteTarget(task), variant: 'danger' as const },
+                  ];
+
                   return (
                     <div key={task.id}>
                       <SortableParentCard
@@ -246,9 +259,8 @@ export function TaskListDetailPage() {
                         onCheck={() =>
                           updateTask.mutate({ taskId: task.id, data: { status: 'DONE' } })
                         }
-                        onDelete={() => setDeleteTarget(task)}
+                        menuItems={parentMenu}
                         onEdit={() => openEdit(task)}
-                        onAddSubtask={() => openAddSubtask(task.id)}
                       />
                       {hasSubtasks && !collapsed && !activeDragId && (
                         <div className="ml-8 mt-1 space-y-1">
@@ -268,7 +280,10 @@ export function TaskListDetailPage() {
                                 onCheck={() =>
                                   updateTask.mutate({ taskId: sub.id, data: { status: 'DONE' } })
                                 }
-                                onDelete={() => setDeleteTarget(sub)}
+                                menuItems={[
+                                  { label: 'Move to top', onClick: () => moveTask.mutate({ taskId: sub.id, parentId: null }) },
+                                  { label: 'Delete', onClick: () => setDeleteTarget(sub), variant: 'danger' as const },
+                                ]}
                                 onEdit={() => openEdit(sub)}
                               />
                             )}
@@ -529,6 +544,24 @@ export function TaskListDetailPage() {
         title="Delete List"
         message={`Delete "${list.name}" and all its tasks?`}
         loading={deleteList.isPending}
+      />
+
+      {/* Move task modal */}
+      <MoveTaskModal
+        open={!!moveTarget}
+        onClose={() => setMoveTarget(null)}
+        eligibleParents={
+          moveTarget
+            ? todoTasks.filter((t) => t.id !== moveTarget.id)
+            : []
+        }
+        onSelect={async (parentId) => {
+          if (moveTarget) {
+            await moveTask.mutateAsync({ taskId: moveTarget.id, parentId });
+            setMoveTarget(null);
+          }
+        }}
+        loading={moveTask.isPending}
       />
 
       {/* Shares modal */}

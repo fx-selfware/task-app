@@ -86,6 +86,34 @@ Feature: Templates API
     When I POST a template subtask "Nested" under "Sub 1"
     Then the status is 400
 
+  # --- Move template task scenarios ---
+
+  Scenario: Promote template subtask to top-level
+    Given I have a template named "My Template"
+    And I add a template task "Task A" to that template
+    And I add a template task "Task B" to that template
+    And I add a template task "Task C" to that template
+    And I add a template subtask "Sub 1" under "Task B"
+    When I move template task "Sub 1" to top-level
+    Then the status is 200
+    And the template top-level order is "Task A", "Task B", "Sub 1", "Task C"
+
+  Scenario: Demote template top-level task to subtask
+    Given I have a template named "My Template"
+    And I add a template task "Task A" to that template
+    And I add a template task "Task B" to that template
+    When I move template task "Task B" under "Task A"
+    Then the status is 200
+    And template task "Task B" is a subtask of "Task A"
+
+  Scenario: Cannot demote template task that has subtasks
+    Given I have a template named "My Template"
+    And I add a template task "Parent" to that template
+    And I add a template subtask "Sub" under "Parent"
+    And I add a template task "Other" to that template
+    When I move template task "Parent" under "Other"
+    Then the status is 400
+
   Scenario: Apply template preserves subtask hierarchy
     Given I have a template named "Hierarchy Template"
     And I add a template task "Parent" to that template

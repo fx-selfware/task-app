@@ -32,6 +32,9 @@ export const templatesApi = {
   deleteTask: (templateId: string, taskId: string) =>
     api.delete<void>(`/templates/${templateId}/tasks/${taskId}`),
 
+  moveTask: (templateId: string, taskId: string, parentId: string | null) =>
+    api.patch<{ task: TemplateTask }>(`/templates/${templateId}/tasks/${taskId}/move`, { parentId }),
+
   reorderTasks: (templateId: string, orderedIds: string[], parentId?: string | null) =>
     api.put<{ ok: boolean }>(`/templates/${templateId}/tasks/reorder`, {
       orderedIds,

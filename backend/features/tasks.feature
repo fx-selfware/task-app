@@ -111,3 +111,41 @@ Feature: Tasks API
     And I DELETE completed subtasks of "Parent" from that list
     Then the status is 204
     And task "Parent" has 1 subtask
+
+  # --- Move task scenarios ---
+
+  Scenario: Promote subtask to top-level (placed after former parent)
+    Given I have tasks "Task A", "Task B", "Task C" in that list
+    And I have a subtask "Sub 1" under "Task B" in that list
+    When I move task "Sub 1" to top-level in that list
+    Then the status is 200
+    And the top-level task order is "Task A", "Task B", "Sub 1", "Task C"
+
+  Scenario: Demote top-level task to subtask (placed as last subtask)
+    Given I have a task "Task A" in that list
+    And I have a subtask "Sub X" under "Task A" in that list
+    And I have a task "Task B" in that list
+    When I move task "Task B" under "Task A" in that list
+    Then the status is 200
+    And task "Task B" is a subtask of "Task A"
+
+  Scenario: Cannot demote a task that has subtasks
+    Given I have a task "Parent" in that list
+    And I have a subtask "Sub" under "Parent" in that list
+    And I have a task "Other" in that list
+    When I move task "Parent" under "Other" in that list
+    Then the status is 400
+
+  Scenario: Cannot move a completed task
+    Given I have a task "Done Task" in that list
+    And I have a task "Other" in that list
+    When I PATCH that task with body '{"status":"DONE"}' for "Done Task"
+    And I move task "Done Task" under "Other" in that list
+    Then the status is 400
+
+  Scenario: Cannot demote under a completed parent
+    Given I have a task "Parent" in that list
+    And I have a task "Orphan" in that list
+    When I PATCH that task with body '{"status":"DONE"}' for "Parent"
+    And I move task "Orphan" under "Parent" in that list
+    Then the status is 400

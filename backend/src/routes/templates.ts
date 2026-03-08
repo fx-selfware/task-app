@@ -10,6 +10,7 @@ import {
   createTemplateTask,
   updateTemplateTask,
   deleteTemplateTask,
+  moveTemplateTask,
   reorderTemplateTasks,
   applyTemplate,
 } from '../services/templates';
@@ -92,6 +93,23 @@ export async function templateRoutes(app: FastifyInstance) {
         request.user.userId,
         body,
       );
+      publish(`template:${id}`);
+      return reply.send({ task });
+    },
+  );
+
+  app.patch(
+    '/templates/:id/tasks/:tid/move',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { id, tid } = request.params as { id: string; tid: string };
+      const { parentId } = request.body as { parentId: string | null };
+
+      if (parentId === undefined) {
+        return reply.status(400).send({ error: 'parentId is required (string or null)' });
+      }
+
+      const task = await moveTemplateTask(app.prisma, id, tid, request.user.userId, parentId);
       publish(`template:${id}`);
       return reply.send({ task });
     },

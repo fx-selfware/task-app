@@ -11,6 +11,8 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { OverflowMenu } from './OverflowMenu';
+import type { MenuItem } from './OverflowMenu';
 
 // --- Shared sortable parent card (tasks + templates) ---
 
@@ -22,9 +24,8 @@ interface SortableParentCardProps {
   hasSubtasks: boolean;
   collapsed: boolean;
   onToggleCollapse: () => void;
-  onDelete: () => void;
+  menuItems?: MenuItem[];
   onEdit: () => void;
-  onAddSubtask: () => void;
   onCheck?: () => void;
 }
 
@@ -36,9 +37,8 @@ export function SortableParentCard({
   hasSubtasks,
   collapsed,
   onToggleCollapse,
-  onDelete,
+  menuItems,
   onEdit,
-  onAddSubtask,
   onCheck,
 }: SortableParentCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -84,33 +84,10 @@ export function SortableParentCard({
           <p className="mt-0.5 text-sm text-gray-500">{description}</p>
         )}
       </div>
-      {canWrite && (
-        <button
-          onClick={onAddSubtask}
-          className="p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-blue-500"
-          aria-label="Add subtask"
-          title="Add subtask"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      )}
-      {canWrite && (
-        <button
-          onClick={onDelete}
-          className="p-2 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
-          aria-label="Delete task"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-        </button>
+      {canWrite && menuItems && menuItems.length > 0 && (
+        <div className="opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+          <OverflowMenu items={menuItems} aria-label="Task actions" />
+        </div>
       )}
       {canWrite && (
         <button
@@ -141,7 +118,7 @@ interface SortableSubtaskCardProps {
   title: string;
   description?: string | null;
   canWrite: boolean;
-  onDelete: () => void;
+  menuItems?: MenuItem[];
   onEdit: () => void;
   onCheck?: () => void;
 }
@@ -151,7 +128,7 @@ export function SortableSubtaskCard({
   title,
   description,
   canWrite,
-  onDelete,
+  menuItems,
   onEdit,
   onCheck,
 }: SortableSubtaskCardProps) {
@@ -189,21 +166,10 @@ export function SortableSubtaskCard({
           <p className="mt-0.5 text-xs text-gray-500">{description}</p>
         )}
       </div>
-      {canWrite && (
-        <button
-          onClick={onDelete}
-          className="p-1.5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-red-500"
-          aria-label="Delete task"
-        >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-        </button>
+      {canWrite && menuItems && menuItems.length > 0 && (
+        <div className="opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+          <OverflowMenu items={menuItems} aria-label="Task actions" />
+        </div>
       )}
       {canWrite && (
         <button

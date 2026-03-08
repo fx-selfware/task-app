@@ -135,6 +135,64 @@ export async function deleteCompletedSubtasks(
   });
 }
 
+export async function moveTask(
+  prisma: PrismaClient,
+  taskListId: string,
+  taskId: string,
+  newParentId: string | null,
+) {
+  return prisma.$transaction(async (tx) => {
+    const task = await tx.task.findFirst({
+      where: { id: taskId, taskListId },
+      include: { subtasks: { select: { id: true } } },
+    });
+    if (!task) return httpError(404, 'Not found');
+    if (task.status !== 'TODO') return httpError(400, 'Cannot move a completed task');
+    if (task.parentId === newParentId) return task;
+
+    if (newParentId !== null) {
+      // --- DEMOTE: top-level → subtask ---
+      if (task.parentId !== null) return httpError(400, 'Task is already a subtask');
+      if (task.subtasks.length > 0) return httpError(400, 'Cannot move a task that has subtasks');
+      if (newParentId === taskId) return httpError(400, 'Cannot move task under itself');
+
+      const newParent = await tx.task.findFirst({
+        where: { id: newParentId, taskListId, parentId: null },
+      });
+      if (!newParent) return httpError(400, 'Invalid parent task');
+      if (newParent.status !== 'TODO') return httpError(400, 'Cannot move under a completed task');
+
+      const maxSubOrder = await tx.task.aggregate({
+        where: { taskListId, parentId: newParentId },
+        _max: { order: true },
+      });
+
+      return tx.task.update({
+        where: { id: taskId },
+        data: { parentId: newParentId, order: (maxSubOrder._max.order ?? -1) + 1 },
+      });
+    } else {
+      // --- PROMOTE: subtask → top-level ---
+      if (task.parentId === null) return httpError(400, 'Task is already top-level');
+
+      const formerParent = await tx.task.findFirst({
+        where: { id: task.parentId, taskListId },
+      });
+      if (!formerParent) return httpError(404, 'Parent not found');
+
+      await tx.task.updateMany({
+        where: { taskListId, parentId: null, order: { gt: formerParent.order } },
+        data: { order: { increment: 1 } },
+      });
+
+      return tx.task.update({
+        where: { id: taskId },
+        data: { parentId: null, order: formerParent.order + 1 },
+      });
+    }
+  });
+}
+
 export async function reorderTasks(
   prisma: PrismaClient,
   taskListId: string,

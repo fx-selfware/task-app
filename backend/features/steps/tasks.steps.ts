@@ -329,6 +329,59 @@ When(
   },
 );
 
+// --- Move task steps ---
+
+When(
+  'I move task {string} to top-level in that list',
+  async function (this: AppWorld, title: string) {
+    const taskId = this.tasksByTitle[title];
+    await this.request('PATCH', `/api/task-lists/${this.listId}/tasks/${taskId}/move`, {
+      payload: { parentId: null },
+      cookie: this.myCookie,
+    });
+  },
+);
+
+When(
+  'I move task {string} under {string} in that list',
+  async function (this: AppWorld, title: string, parentTitle: string) {
+    const taskId = this.tasksByTitle[title];
+    const parentId = this.tasksByTitle[parentTitle];
+    await this.request('PATCH', `/api/task-lists/${this.listId}/tasks/${taskId}/move`, {
+      payload: { parentId },
+      cookie: this.myCookie,
+    });
+  },
+);
+
+Then(
+  'the top-level task order is {string}, {string}, {string}, {string}',
+  async function (this: AppWorld, t1: string, t2: string, t3: string, t4: string) {
+    const listRes = await this.app.inject({
+      method: 'GET',
+      url: `/api/task-lists/${this.listId}`,
+      headers: { cookie: this.myCookie },
+    });
+    const titles = listRes.json().list.tasks.map((t: any) => t.title);
+    expect(titles).to.deep.equal([t1, t2, t3, t4]);
+  },
+);
+
+Then(
+  'task {string} is a subtask of {string}',
+  async function (this: AppWorld, childTitle: string, parentTitle: string) {
+    const listRes = await this.app.inject({
+      method: 'GET',
+      url: `/api/task-lists/${this.listId}`,
+      headers: { cookie: this.myCookie },
+    });
+    const parent = listRes.json().list.tasks.find((t: any) => t.title === parentTitle);
+    expect(parent).to.exist;
+    const child = (parent.subtasks ?? []).find((s: any) => s.title === childTitle);
+    expect(child).to.exist;
+  },
+);
+
 Then(
   'task {string} has {int} subtask(s)',
   async function (this: AppWorld, parentTitle: string, count: number) {
