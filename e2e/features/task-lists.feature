@@ -43,7 +43,8 @@ Feature: Task Lists
     And I check the checkbox for "Task B"
     And I expand the completed section
     Then "Task A" appears with strikethrough styling
-    And I click "Delete completed"
+    When I click "List actions"
+    And I click the menu item "Delete completed"
     And I confirm the deletion
     Then the completed section is not visible
 

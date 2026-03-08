@@ -24,7 +24,6 @@ import {
   useMoveTask,
   useReorderTasks,
   useDeleteCompletedTasks,
-  useDeleteCompletedSubtasks,
 } from '../hooks/useTasks';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -52,7 +51,6 @@ export function TaskListDetailPage() {
   const reorderTasks = useReorderTasks(id!);
   const deleteCompletedTasks = useDeleteCompletedTasks(id!);
   const moveTask = useMoveTask(id!);
-  const deleteCompletedSubtasks = useDeleteCompletedSubtasks(id!);
   useTaskListEvents(id!);
 
   const [showRename, setShowRename] = useState(false);
@@ -72,7 +70,6 @@ export function TaskListDetailPage() {
   const [showDeleteCompleted, setShowDeleteCompleted] = useState(false);
   const [collapsedParents, toggleCollapse] = useToggleSet();
   const [showCompletedSubs, toggleCompletedSubs] = useToggleSet();
-  const [deleteCompletedSubsTarget, setDeleteCompletedSubsTarget] = useState<string | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [moveTarget, setMoveTarget] = useState<Task | null>(null);
 
@@ -83,14 +80,13 @@ export function TaskListDetailPage() {
 
   const tasks = data?.list?.tasks ?? [];
 
-  // Count all done tasks (top-level + done subtasks)
+  // Count all done tasks (top-level + all done subtasks)
   const doneTopLevel = tasks.filter((t) => t.status === 'DONE');
-  const allDoneCount =
-    doneTopLevel.length +
-    doneTopLevel.reduce(
-      (sum, t) => sum + (t.subtasks?.filter((s) => s.status === 'DONE').length ?? 0),
-      0,
-    );
+  const allDoneCount = tasks.reduce((sum, t) => {
+    let count = t.status === 'DONE' ? 1 : 0;
+    count += t.subtasks?.filter((s) => s.status === 'DONE').length ?? 0;
+    return sum + count;
+  }, 0);
 
   useEffect(() => {
     if (doneTopLevel.length === 0) setShowCompleted(false);
@@ -263,16 +259,21 @@ export function TaskListDetailPage() {
               + Task
             </Button>
           )}
-          {isOwner && (
-            <OverflowMenu
-              aria-label="List actions"
-              items={[
+          <OverflowMenu
+            aria-label="List actions"
+            items={[
+              ...(isOwner ? [
                 { label: 'Share', onClick: () => setShowShares(true) },
                 { label: 'Rename', onClick: () => { setRenameName(list.name); setShowRename(true); } },
-                { label: 'Delete', onClick: () => setShowDeleteList(true), variant: 'danger' },
-              ]}
-            />
-          )}
+              ] : []),
+              ...(canWrite && allDoneCount > 0 ? [
+                { label: 'Delete completed', onClick: () => setShowDeleteCompleted(true), variant: 'danger' as const },
+              ] : []),
+              ...(isOwner ? [
+                { label: 'Delete', onClick: () => setShowDeleteList(true), variant: 'danger' as const },
+              ] : []),
+            ]}
+          />
         </div>
       </div>
 
@@ -374,22 +375,12 @@ export function TaskListDetailPage() {
                           />
                           {doneSubs.length > 0 && (
                             <div className="mt-1">
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => toggleCompletedSubs(task.id)}
-                                  className="py-1 text-xs font-medium text-gray-500 hover:text-gray-700"
-                                >
-                                  Completed ({doneSubs.length}) {showCompletedSubs.has(task.id) ? '▲' : '▶'}
-                                </button>
-                                {showCompletedSubs.has(task.id) && canWrite && (
-                                  <button
-                                    onClick={() => setDeleteCompletedSubsTarget(task.id)}
-                                    className="py-1 text-xs text-red-500 hover:text-red-700"
-                                  >
-                                    Delete completed
-                                  </button>
-                                )}
-                              </div>
+                              <button
+                                onClick={() => toggleCompletedSubs(task.id)}
+                                className="py-1 text-xs font-medium text-gray-500 hover:text-gray-700"
+                              >
+                                Completed ({doneSubs.length}) {showCompletedSubs.has(task.id) ? '▲' : '▶'}
+                              </button>
                               {showCompletedSubs.has(task.id) && (
                                 <div className="mt-1 space-y-1">
                                   {doneSubs.map((sub) => (
@@ -416,22 +407,12 @@ export function TaskListDetailPage() {
 
           {doneTasks.length > 0 && (
             <div className="mt-4">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowCompleted((v) => !v)}
-                  className="py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
-                >
-                  Completed ({allDoneCount}) {showCompleted ? '▲' : '▶'}
-                </button>
-                {showCompleted && canWrite && (
-                  <button
-                    onClick={() => setShowDeleteCompleted(true)}
-                    className="py-2 text-sm text-red-500 hover:text-red-700"
-                  >
-                    Delete completed
-                  </button>
-                )}
-              </div>
+              <button
+                onClick={() => setShowCompleted((v) => !v)}
+                className="py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+              >
+                Completed ({allDoneCount}) {showCompleted ? '▲' : '▶'}
+              </button>
               {showCompleted && (
                 <div className="mt-2 space-y-2">
                   {doneTasks.map((task) => (
@@ -597,21 +578,6 @@ export function TaskListDetailPage() {
         title="Delete Completed Tasks"
         message={`Delete ${allDoneCount} completed task(s)?`}
         loading={deleteCompletedTasks.isPending}
-      />
-
-      {/* Delete completed subtasks confirm */}
-      <ConfirmDialog
-        open={!!deleteCompletedSubsTarget}
-        onClose={() => setDeleteCompletedSubsTarget(null)}
-        onConfirm={async () => {
-          if (deleteCompletedSubsTarget) {
-            await deleteCompletedSubtasks.mutateAsync(deleteCompletedSubsTarget);
-            setDeleteCompletedSubsTarget(null);
-          }
-        }}
-        title="Delete Completed Subtasks"
-        message="Delete all completed subtasks?"
-        loading={deleteCompletedSubtasks.isPending}
       />
 
       {/* Delete list confirm */}
