@@ -111,7 +111,7 @@ Feature: Task Lists
     And I add a task named "Parent"
     And I add a subtask named "Child" to "Parent"
     And I open the task menu for "Child"
-    And I click the menu item "Move to top"
+    And I click the menu item "Move to top level"
     Then "Child" is visible in the task list
     And "Child" is a top-level task after "Parent"
 

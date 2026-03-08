@@ -275,7 +275,7 @@ export function TemplateDetailPage() {
                               canWrite={canWrite}
                               onEdit={() => openEdit(sub)}
                               menuItems={[
-                                { label: 'Move to top', onClick: () => moveTemplateTask.mutate({ taskId: sub.id, parentId: null }) },
+                                { label: 'Move to top level', onClick: () => moveTemplateTask.mutate({ taskId: sub.id, parentId: null }) },
                                 { label: 'Delete', onClick: () => setDeleteTarget(sub), variant: 'danger' as const },
                               ]}
                             />

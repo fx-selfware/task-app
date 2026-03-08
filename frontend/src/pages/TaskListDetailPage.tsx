@@ -364,7 +364,7 @@ export function TaskListDetailPage() {
                                   isCompleting={completingIds.has(sub.id)}
                                   onCheck={() => handleComplete(sub.id)}
                                   menuItems={[
-                                    { label: 'Move to top', onClick: () => moveTask.mutate({ taskId: sub.id, parentId: null }) },
+                                    { label: 'Move to top level', onClick: () => moveTask.mutate({ taskId: sub.id, parentId: null }) },
                                     { label: 'Delete', onClick: () => setDeleteTarget(sub), variant: 'danger' as const },
                                   ]}
                                   onEdit={() => openEdit(sub)}
