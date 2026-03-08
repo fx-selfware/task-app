@@ -9,6 +9,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverlay,
   MeasuringStrategy,
 } from '@dnd-kit/core';
 import {
@@ -290,6 +291,22 @@ export function TemplateDetailPage() {
               })}
             </div>
           </SortableContext>
+          <DragOverlay>
+            {activeDragId && (() => {
+              const t = tasks.find((x) => x.id === activeDragId);
+              if (!t) return null;
+              return (
+                <div className="flex items-center gap-3 rounded-lg border bg-white p-3 shadow-lg">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900">{t.title}</p>
+                    {t.description && (
+                      <p className="mt-0.5 text-sm text-gray-500">{t.description}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </DragOverlay>
         </DndContext>
       )}
 
