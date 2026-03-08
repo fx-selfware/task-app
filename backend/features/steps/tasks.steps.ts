@@ -51,7 +51,9 @@ Given(
         payload: { title },
         headers: { cookie: this.myCookie },
       });
-      this.taskIds.push(res.json().task.id);
+      const id = res.json().task.id;
+      this.taskIds.push(id);
+      this.tasksByTitle[title] = id;
     }
   },
 );

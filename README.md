@@ -118,7 +118,7 @@ docker compose -f docker-compose.yml -f docker-compose.test.yml down
 
 ```bash
 # Backend BDD tests (API layer)
-docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend-test
+docker compose -f docker-compose.yml -f docker-compose.test.yml run --build --rm backend-test
 
 # All E2E tests (clean DB, port 8099)
 COMMIT_SHA=$(git rev-parse HEAD) docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V

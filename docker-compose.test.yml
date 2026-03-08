@@ -1,7 +1,7 @@
 # Test environment. Extends docker-compose.yml.
 #
 # Backend BDD:
-#   docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend-test
+#   docker compose -f docker-compose.yml -f docker-compose.test.yml run --build --rm backend-test
 #
 # E2E (clean DB, port 8099):
 #   COMMIT_SHA=$(git rev-parse HEAD) docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V

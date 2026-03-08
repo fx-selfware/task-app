@@ -15,7 +15,7 @@
 
 ```bash
 # Backend BDD tests (from repo root)
-docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend-test
+docker compose -f docker-compose.yml -f docker-compose.test.yml run --build --rm backend-test
 
 # E2E tests (clean DB, production builds, port 8099)
 COMMIT_SHA=$(git rev-parse HEAD) docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
