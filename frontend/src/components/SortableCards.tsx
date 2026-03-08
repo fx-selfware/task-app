@@ -88,7 +88,7 @@ export function SortableParentCard({
       </div>
       {canWrite && menuItems && menuItems.length > 0 && (
         <div className="opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100">
-          <OverflowMenu items={menuItems} aria-label="Task actions" />
+          <OverflowMenu items={menuItems} variant="ghost" aria-label="Task actions" />
         </div>
       )}
       {canWrite && (
@@ -172,7 +172,7 @@ export function SortableSubtaskCard({
       </div>
       {canWrite && menuItems && menuItems.length > 0 && (
         <div className="opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100">
-          <OverflowMenu items={menuItems} aria-label="Task actions" />
+          <OverflowMenu items={menuItems} variant="ghost" aria-label="Task actions" />
         </div>
       )}
       {canWrite && (

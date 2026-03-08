@@ -8,10 +8,11 @@ export interface MenuItem {
 
 interface OverflowMenuProps {
   items: MenuItem[];
+  variant?: 'bordered' | 'ghost';
   'aria-label'?: string;
 }
 
-export function OverflowMenu({ items, 'aria-label': ariaLabel = 'More actions' }: OverflowMenuProps) {
+export function OverflowMenu({ items, variant = 'bordered', 'aria-label': ariaLabel = 'More actions' }: OverflowMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -39,7 +40,7 @@ export function OverflowMenu({ items, 'aria-label': ariaLabel = 'More actions' }
     <div className="relative" ref={containerRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        className={`inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${variant === 'bordered' ? 'border border-gray-300 bg-white' : ''}`}
         aria-label={ariaLabel}
         aria-expanded={open}
         aria-haspopup="menu"
