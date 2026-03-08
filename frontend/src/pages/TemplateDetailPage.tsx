@@ -10,7 +10,6 @@ import {
   useSensors,
   DragEndEvent,
   DragOverlay,
-  MeasuringStrategy,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -225,7 +224,6 @@ export function TemplateDetailPage() {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          measuring={{ droppable: { strategy: MeasuringStrategy.WhileDragging } }}
           onDragStart={(event) => setActiveDragId(event.active.id as string)}
           onDragEnd={(event) => { setActiveDragId(null); handleDragEnd(event); }}
           onDragCancel={() => setActiveDragId(null)}
@@ -261,8 +259,11 @@ export function TemplateDetailPage() {
                       onEdit={() => openEdit(task)}
                       menuItems={parentMenu}
                     />
-                    {hasSubtasks && !collapsed && !activeDragId && (
-                      <div className="ml-8 mt-1 space-y-1">
+                    {hasSubtasks && !collapsed && (
+                      <div
+                        className="ml-8 mt-1 space-y-1"
+                        style={activeDragId ? { opacity: 0.3, pointerEvents: 'none' } : undefined}
+                      >
                         <SubtaskDndList
                           items={subtasks}
                           sensors={sensors}

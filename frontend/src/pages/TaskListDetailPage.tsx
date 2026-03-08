@@ -10,7 +10,6 @@ import {
   useSensors,
   DragEndEvent,
   DragOverlay,
-  MeasuringStrategy,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -309,7 +308,6 @@ export function TaskListDetailPage() {
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            measuring={{ droppable: { strategy: MeasuringStrategy.WhileDragging } }}
             onDragStart={(event) => setActiveDragId(event.active.id as string)}
             onDragEnd={(event) => { setActiveDragId(null); handleDragEnd(event); }}
             onDragCancel={() => setActiveDragId(null)}
@@ -359,8 +357,11 @@ export function TaskListDetailPage() {
                         menuItems={parentMenu}
                         onEdit={() => openEdit(task)}
                       />
-                      {hasVisibleSubs && !collapsed && !activeDragId && (
-                        <div className="ml-8 mt-1 space-y-1">
+                      {hasVisibleSubs && !collapsed && (
+                        <div
+                          className="ml-8 mt-1 space-y-1"
+                          style={activeDragId ? { opacity: 0.3, pointerEvents: 'none' } : undefined}
+                        >
                           <SubtaskDndList
                             items={todoSubs}
                             sensors={sensors}
@@ -407,7 +408,7 @@ export function TaskListDetailPage() {
                 const t = todoTasks.find((x) => x.id === activeDragId);
                 if (!t) return null;
                 return (
-                  <div className="flex items-center gap-3 rounded-lg border bg-white p-3 shadow-lg">
+                  <div data-testid="drag-overlay" className="flex items-center gap-3 rounded-lg border bg-white p-3 shadow-lg">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900">{t.title}</p>
                       {t.description && (

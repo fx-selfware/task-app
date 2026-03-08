@@ -3,6 +3,7 @@ const { Given, When, Then } = createBdd();
 import { expect, Page } from '@playwright/test';
 
 let collabPage: Page | null = null;
+let lastDragMouseY = 0;
 
 Given('I have a task list named {string}', async ({ page }, name: string) => {
   await page.click('text=+ New List');
@@ -205,10 +206,22 @@ When('I start dragging {string}', async ({ page }, name: string) => {
   await dragHandle.scrollIntoViewIfNeeded();
   await dragHandle.waitFor({ state: 'visible' });
   const box = await dragHandle.boundingBox();
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  const mouseY = box!.y + box!.height / 2;
+  await page.mouse.move(box!.x + box!.width / 2, mouseY);
   await page.mouse.down();
   // Move enough to activate dnd-kit MouseSensor
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2 + 20);
+  lastDragMouseY = mouseY + 20;
+  await page.mouse.move(box!.x + box!.width / 2, lastDragMouseY);
+});
+
+Then('the drag overlay is within {int}px of the mouse vertically', async ({ page }, threshold: number) => {
+  const overlay = page.getByTestId('drag-overlay');
+  await expect(overlay).toBeVisible({ timeout: 3000 });
+  const box = await overlay.boundingBox();
+  expect(box).toBeTruthy();
+  const overlayCenterY = box!.y + box!.height / 2;
+  const distance = Math.abs(overlayCenterY - lastDragMouseY);
+  expect(distance).toBeLessThanOrEqual(threshold);
 });
 
 When('I release the drag', async ({ page }) => {
@@ -218,6 +231,18 @@ When('I release the drag', async ({ page }) => {
 Then('{string} appears as a readonly header in the completed section', async ({ page }, name: string) => {
   const header = page.getByTestId('readonly-parent-header').filter({ hasText: name });
   await expect(header).toBeVisible({ timeout: 5000 });
+});
+
+Then('the subtask area of {string} is dimmed', async ({ page }, parentName: string) => {
+  const parentCard = page.locator('.space-y-2 > div').filter({ hasText: parentName }).first();
+  const subtaskArea = parentCard.locator('.ml-8').first();
+  await expect(subtaskArea).toHaveCSS('opacity', '0.3', { timeout: 3000 });
+});
+
+Then('the subtask area of {string} is not dimmed', async ({ page }, parentName: string) => {
+  const parentCard = page.locator('.space-y-2 > div').filter({ hasText: parentName }).first();
+  const subtaskArea = parentCard.locator('.ml-8').first();
+  await expect(subtaskArea).not.toHaveCSS('opacity', '0.3', { timeout: 3000 });
 });
 
 When('I collapse the subtasks of {string}', async ({ page }, parentName: string) => {
