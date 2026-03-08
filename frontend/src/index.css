@@ -25,7 +25,8 @@
   }
 }
 
-.task-completing {
+.task-completing,
+.task-uncompleting {
   animation: task-exit 300ms ease-out forwards;
   pointer-events: none;
 }
@@ -36,6 +37,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .task-completing,
+  .task-uncompleting,
   .task-entering {
     animation-duration: 0ms;
   }

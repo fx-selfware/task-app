@@ -77,6 +77,7 @@ export function TaskListDetailPage() {
 
   // Animation tracking
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
+  const [uncompletingIds, setUncompletingIds] = useState<Set<string>>(new Set());
   const [enteringIds, setEnteringIds] = useState<Set<string>>(new Set());
   const prevTodoIdsRef = useRef<Set<string>>(new Set());
 
@@ -90,8 +91,8 @@ export function TaskListDetailPage() {
   }, 0);
 
   useEffect(() => {
-    if (allDoneCount === 0) setShowCompleted(false);
-  }, [allDoneCount]);
+    if (allDoneCount === 0 && uncompletingIds.size === 0) setShowCompleted(false);
+  }, [allDoneCount, uncompletingIds]);
 
   // Compensate DragOverlay position for the layout shift when subtasks collapse.
   // Runs after DOM commit but before paint, so the user never sees the wrong position.
@@ -103,12 +104,12 @@ export function TaskListDetailPage() {
 
   const todoTasks = localOrder
     ? localOrder.map((tid) => tasks.find((t) => t.id === tid)!).filter(Boolean)
-    : tasks.filter((t) => t.status === 'TODO' || completingIds.has(t.id));
+    : tasks.filter((t) => (t.status === 'TODO' && !uncompletingIds.has(t.id)) || completingIds.has(t.id));
 
   // Build groups for the completed section
   const completedGroups: { parent: Task; parentMode: 'completed' | 'readonly-header'; completedSubtasks: Task[] }[] = [];
   for (const task of tasks) {
-    if (task.status === 'DONE' && !completingIds.has(task.id)) {
+    if ((task.status === 'DONE' || uncompletingIds.has(task.id)) && !completingIds.has(task.id)) {
       completedGroups.push({
         parent: task,
         parentMode: 'completed',
@@ -116,7 +117,7 @@ export function TaskListDetailPage() {
       });
     } else if (task.status === 'TODO') {
       const doneSubs = (task.subtasks ?? []).filter(
-        (s) => s.status === 'DONE' && !completingIds.has(s.id)
+        (s) => (s.status === 'DONE' || uncompletingIds.has(s.id)) && !completingIds.has(s.id)
       );
       if (doneSubs.length > 0) {
         completedGroups.push({
@@ -169,11 +170,33 @@ export function TaskListDetailPage() {
   }, [updateTask, tasks]);
 
   const handleUncomplete = useCallback((taskId: string) => {
+    setUncompletingIds((s) => {
+      const next = new Set(s);
+      next.add(taskId);
+      return next;
+    });
     updateTask.mutate({ taskId, data: { status: 'TODO' } });
+    // Fallback: clear animation state after duration in case onAnimationEnd doesn't fire
+    // (e.g. if the element is removed from the DOM mid-animation)
+    setTimeout(() => {
+      setUncompletingIds((s) => {
+        const next = new Set(s);
+        next.delete(taskId);
+        return next;
+      });
+    }, 350);
   }, [updateTask]);
 
   const handleExitAnimationEnd = useCallback((taskId: string) => {
     setCompletingIds((s) => {
+      const next = new Set(s);
+      next.delete(taskId);
+      return next;
+    });
+  }, []);
+
+  const handleUncompleteAnimationEnd = useCallback((taskId: string) => {
+    setUncompletingIds((s) => {
       const next = new Set(s);
       next.delete(taskId);
       return next;
@@ -445,25 +468,41 @@ export function TaskListDetailPage() {
                   {completedGroups.map((group) => (
                     <div key={group.parent.id}>
                       {group.parentMode === 'completed' ? (
-                        <CompletedTaskCard
-                          task={group.parent}
-                          canWrite={canWrite}
-                          onUncheck={() => handleUncomplete(group.parent.id)}
-                          onDelete={() => setDeleteTarget(group.parent)}
-                        />
+                        <div
+                          className={uncompletingIds.has(group.parent.id) ? 'task-uncompleting' : ''}
+                          onAnimationEnd={() => {
+                            if (uncompletingIds.has(group.parent.id)) handleUncompleteAnimationEnd(group.parent.id);
+                          }}
+                        >
+                          <CompletedTaskCard
+                            task={group.parent}
+                            canWrite={canWrite}
+                            isUncompleting={uncompletingIds.has(group.parent.id)}
+                            onUncheck={() => handleUncomplete(group.parent.id)}
+                            onDelete={() => setDeleteTarget(group.parent)}
+                          />
+                        </div>
                       ) : (
                         <ReadonlyParentHeader task={group.parent} />
                       )}
                       {group.completedSubtasks.length > 0 && (
                         <div className="ml-8 mt-1 space-y-1">
                           {group.completedSubtasks.map((sub) => (
-                            <CompletedTaskCard
+                            <div
                               key={sub.id}
-                              task={sub}
-                              canWrite={canWrite}
-                              onUncheck={() => handleUncomplete(sub.id)}
-                              onDelete={() => setDeleteTarget(sub)}
-                            />
+                              className={uncompletingIds.has(sub.id) ? 'task-uncompleting' : ''}
+                              onAnimationEnd={() => {
+                                if (uncompletingIds.has(sub.id)) handleUncompleteAnimationEnd(sub.id);
+                              }}
+                            >
+                              <CompletedTaskCard
+                                task={sub}
+                                canWrite={canWrite}
+                                isUncompleting={uncompletingIds.has(sub.id)}
+                                onUncheck={() => handleUncomplete(sub.id)}
+                                onDelete={() => setDeleteTarget(sub)}
+                              />
+                            </div>
                           ))}
                         </div>
                       )}
@@ -654,11 +693,13 @@ export function TaskListDetailPage() {
 function CompletedTaskCard({
   task,
   canWrite,
+  isUncompleting,
   onUncheck,
   onDelete,
 }: {
   task: Task;
   canWrite: boolean;
+  isUncompleting?: boolean;
   onUncheck: () => void;
   onDelete: () => void;
 }) {
@@ -666,16 +707,16 @@ function CompletedTaskCard({
     <div className="group flex items-center gap-3 rounded-lg border bg-white p-3 shadow-sm">
       <input
         type="checkbox"
-        checked={true}
-        onChange={canWrite ? onUncheck : undefined}
-        disabled={!canWrite}
+        checked={!isUncompleting}
+        onChange={canWrite && !isUncompleting ? onUncheck : undefined}
+        disabled={!canWrite || !!isUncompleting}
         className="h-5 w-5 cursor-pointer rounded border-gray-300"
         aria-label={`Mark "${task.title}" as todo`}
       />
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-400 line-through">{task.title}</p>
+        <p className={`font-medium ${isUncompleting ? 'text-gray-900' : 'text-gray-400 line-through'}`}>{task.title}</p>
         {task.description && (
-          <p className="mt-0.5 text-sm text-gray-400 line-through">{task.description}</p>
+          <p className={`mt-0.5 text-sm ${isUncompleting ? 'text-gray-500' : 'text-gray-400 line-through'}`}>{task.description}</p>
         )}
       </div>
       {canWrite && (

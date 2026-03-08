@@ -26,7 +26,7 @@ export function MoveTaskModal({
       {eligibleParents.length === 0 ? (
         <p className="text-sm text-gray-400">No eligible tasks.</p>
       ) : (
-        <ul className="space-y-1">
+        <ul className="space-y-1 max-h-80 overflow-y-auto">
           {eligibleParents.map((parent) => (
             <li key={parent.id}>
               <button
