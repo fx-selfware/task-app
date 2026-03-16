@@ -57,7 +57,7 @@ When('I edit the task {string} to have title {string} and description {string}',
 });
 
 Then('{string} is visible in the task list', async ({ page }, name: string) => {
-  await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText(name).first()).toBeVisible({ timeout: 5000 });
 });
 
 Then('{string} is no longer visible in the task list', async ({ page }, name: string) => {
