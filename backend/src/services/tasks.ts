@@ -151,8 +151,7 @@ export async function moveTask(
     if (task.parentId === newParentId) return task;
 
     if (newParentId !== null) {
-      // --- DEMOTE: top-level → subtask ---
-      if (task.parentId !== null) return httpError(400, 'Task is already a subtask');
+      // --- DEMOTE / REPARENT: move under a new parent ---
       if (task.subtasks.length > 0) return httpError(400, 'Cannot move a task that has subtasks');
       if (newParentId === taskId) return httpError(400, 'Cannot move task under itself');
 
@@ -161,6 +160,12 @@ export async function moveTask(
       });
       if (!newParent) return httpError(400, 'Invalid parent task');
       if (newParent.status !== 'TODO') return httpError(400, 'Cannot move under a completed task');
+
+      // Close the gap in the old sibling group
+      await tx.task.updateMany({
+        where: { taskListId, parentId: task.parentId, order: { gt: task.order } },
+        data: { order: { decrement: 1 } },
+      });
 
       const maxSubOrder = await tx.task.aggregate({
         where: { taskListId, parentId: newParentId },

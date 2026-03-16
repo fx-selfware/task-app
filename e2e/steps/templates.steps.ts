@@ -64,7 +64,7 @@ Then(
 );
 
 When('I add a template task named {string}', async ({ page }, name: string) => {
-  await page.getByRole('button', { name: '+ Task' }).click();
+  await page.getByRole('button', { name: 'Add task' }).click();
   await page.getByLabel('Title').fill(name);
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });

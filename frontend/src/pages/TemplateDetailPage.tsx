@@ -35,6 +35,7 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Spinner } from '../components/Spinner';
 import { TemplateSharesModal } from './TemplateSharesModal';
+import { FloatingAddButton } from '../components/FloatingAddButton';
 import { OverflowMenu } from '../components/OverflowMenu';
 import { SortableParentCard, SortableSubtaskCard, SubtaskDndList } from '../components/SortableCards';
 import { MoveTaskModal } from './MoveTaskModal';
@@ -206,11 +207,6 @@ export function TemplateDetailPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {canWrite && (
-            <Button size="sm" onClick={openAddTask}>
-              + Task
-            </Button>
-          )}
           <OverflowMenu
             aria-label="Template actions"
             items={[
@@ -288,6 +284,7 @@ export function TemplateDetailPage() {
                               canWrite={canWrite}
                               onEdit={() => openEdit(sub)}
                               menuItems={[
+                                { label: 'Move under...', onClick: () => setMoveTarget(sub) },
                                 { label: 'Move to top level', onClick: () => moveTemplateTask.mutate({ taskId: sub.id, parentId: null }) },
                                 { label: 'Delete', onClick: () => setDeleteTarget(sub), variant: 'danger' as const },
                               ]}
@@ -490,7 +487,7 @@ export function TemplateDetailPage() {
         onClose={() => setMoveTarget(null)}
         eligibleParents={
           moveTarget
-            ? tasks.filter((t) => t.id !== moveTarget.id)
+            ? tasks.filter((t) => t.id !== moveTarget.id && t.id !== moveTarget.parentId)
             : []
         }
         onSelect={async (parentId) => {
@@ -508,6 +505,8 @@ export function TemplateDetailPage() {
         onClose={() => setShowShares(false)}
         templateId={id!}
       />
+
+      {canWrite && <FloatingAddButton onClick={openAddTask} />}
     </div>
   );
 }

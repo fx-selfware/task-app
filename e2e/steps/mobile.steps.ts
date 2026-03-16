@@ -18,9 +18,9 @@ Given(
 );
 
 When(
-  'I press "+ Task" and type {string} then press Enter',
+  'I press "Add task" and type {string} then press Enter',
   async ({ page }, title: string) => {
-    await page.getByRole('button', { name: '+ Task' }).click();
+    await page.getByRole('button', { name: 'Add task' }).click();
     const titleInput = page.getByLabel('Title');
     await titleInput.fill(title);
     await titleInput.press('Enter');

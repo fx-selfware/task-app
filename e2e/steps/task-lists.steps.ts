@@ -37,7 +37,7 @@ When('I open the share modal for {string}', async ({ page }, name: string) => {
 });
 
 When('I add a task named {string}', async ({ page }, name: string) => {
-  await page.getByRole('button', { name: '+ Task' }).click();
+  await page.getByRole('button', { name: 'Add task' }).click();
   await page.getByLabel('Title').fill(name);
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });
@@ -196,8 +196,9 @@ Then('{string} is a top-level task after {string}', async ({ page }, name: strin
 });
 
 Then('{string} is visible as a subtask of {string}', async ({ page }, subName: string, parentName: string) => {
-  // After demoting, the subtask should appear under the parent's subtask area
-  await expect(page.getByText(subName)).toBeVisible({ timeout: 5000 });
+  // Find the top-level task wrapper that contains the parent, then verify the subtask is inside it
+  const parentWrapper = page.locator('.space-y-2 > div').filter({ hasText: parentName }).first();
+  await expect(parentWrapper.locator('.ml-8').getByText(subName)).toBeVisible({ timeout: 5000 });
 });
 
 When('I start dragging {string}', async ({ page }, name: string) => {

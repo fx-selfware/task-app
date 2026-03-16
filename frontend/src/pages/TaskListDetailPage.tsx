@@ -32,6 +32,7 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Spinner } from '../components/Spinner';
 import { SharesModal } from './SharesModal';
+import { FloatingAddButton } from '../components/FloatingAddButton';
 import { OverflowMenu } from '../components/OverflowMenu';
 import { useTaskListEvents } from '../hooks/useTaskListEvents';
 import { SortableParentCard, SortableSubtaskCard, SubtaskDndList } from '../components/SortableCards';
@@ -307,11 +308,6 @@ export function TaskListDetailPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {canWrite && (
-            <Button size="sm" onClick={openAddTask}>
-              + Task
-            </Button>
-          )}
           <OverflowMenu
             aria-label="List actions"
             items={[
@@ -333,7 +329,7 @@ export function TaskListDetailPage() {
       {tasks.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 sm:p-12 text-center">
           <p className="text-gray-500">
-            {canWrite ? 'No tasks yet. Add one above!' : 'No tasks in this list.'}
+            {canWrite ? 'No tasks yet. Tap + to add one!' : 'No tasks in this list.'}
           </p>
         </div>
       ) : (
@@ -422,6 +418,7 @@ export function TaskListDetailPage() {
                                   isCompleting={completingIds.has(sub.id)}
                                   onCheck={() => handleComplete(sub.id)}
                                   menuItems={[
+                                    { label: 'Move under...', onClick: () => setMoveTarget(sub) },
                                     { label: 'Move to top level', onClick: () => moveTask.mutate({ taskId: sub.id, parentId: null }) },
                                     { label: 'Delete', onClick: () => setDeleteTarget(sub), variant: 'danger' as const },
                                   ]}
@@ -666,7 +663,7 @@ export function TaskListDetailPage() {
         onClose={() => setMoveTarget(null)}
         eligibleParents={
           moveTarget
-            ? todoTasks.filter((t) => t.id !== moveTarget.id)
+            ? todoTasks.filter((t) => t.id !== moveTarget.id && t.id !== moveTarget.parentId)
             : []
         }
         onSelect={async (parentId) => {
@@ -686,6 +683,8 @@ export function TaskListDetailPage() {
           listId={id!}
         />
       )}
+
+      {canWrite && <FloatingAddButton onClick={openAddTask} />}
     </div>
   );
 }

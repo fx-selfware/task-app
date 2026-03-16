@@ -21,7 +21,7 @@ Feature: Mobile layout
     Given I have a task list named "Quick Add"
     When I click the hamburger button
     And I open the task list "Quick Add"
-    And I press "+ Task" and type "Buy groceries" then press Enter
+    And I press "Add task" and type "Buy groceries" then press Enter
     Then "Buy groceries" is visible in the task list
 
 @touch-only
