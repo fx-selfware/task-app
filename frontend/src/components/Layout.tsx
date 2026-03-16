@@ -36,7 +36,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
@@ -44,7 +44,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-64 transform bg-white shadow-lg transition-transform duration-200 md:relative md:translate-x-0 md:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-white shadow-lg transition-transform duration-200 md:relative md:translate-x-0 md:shadow-none ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         data-testid="sidebar"

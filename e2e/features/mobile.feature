@@ -4,11 +4,14 @@ Feature: Mobile layout
     Given I am using a 375px wide viewport
     And I am logged in as a new user
 
-  Scenario: A hamburger button opens the sidebar and the backdrop closes it
+  Scenario: The sidebar opens and its backdrop covers the floating add button
+    Given I have a task list named "FAB Test"
+    When I click the hamburger button
+    And I open the task list "FAB Test"
     Then the sidebar is not visible
     When I click the hamburger button
     Then the sidebar is visible
-    When I click the backdrop
+    And clicking the floating add button area hits the backdrop instead
     Then the sidebar is not visible
 
   @touch-only

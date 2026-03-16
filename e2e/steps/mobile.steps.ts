@@ -120,3 +120,15 @@ Then('the sidebar is visible', async ({ page }) => {
 When('I click the backdrop', async ({ page }) => {
   await page.click('.bg-black\\/50', { force: true });
 });
+
+Then('clicking the floating add button area hits the backdrop instead', async ({ page }) => {
+  const fab = page.locator('[aria-label="Add task"]');
+  const box = await fab.boundingBox();
+  expect(box).toBeTruthy();
+  // Click at the FAB's coordinates — if the backdrop has a higher z-index it catches the click
+  await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  // The backdrop click should close the sidebar
+  await expect(page.getByTestId('sidebar')).not.toBeInViewport({ timeout: 3000 });
+  // No add-task dialog should have appeared
+  await expect(page.getByRole('dialog')).not.toBeVisible();
+});
