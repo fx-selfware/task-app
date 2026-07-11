@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { templatesApi } from '@/lib/api/templates';
-import type { Permission } from '@/types';
+import type { Permission, TaskTemplate } from '@/types';
 
 export function useTemplates() {
   return useQuery({
@@ -99,6 +99,22 @@ export function useMoveTemplateTask(templateId: string) {
   });
 }
 
+type TemplateDetail = { template: TaskTemplate; isOwner: boolean; permission: Permission | null };
+
+function reorderInTemplate(detail: TemplateDetail, orderedIds: string[], parentId?: string | null): TemplateDetail {
+  const pos = new Map(orderedIds.map((id, i) => [id, i]));
+  const sortByIds = <T extends { id: string }>(arr: T[]): T[] =>
+    [...arr].sort((a, b) => (pos.get(a.id) ?? Infinity) - (pos.get(b.id) ?? Infinity));
+
+  if (!parentId) {
+    return { ...detail, template: { ...detail.template, tasks: sortByIds(detail.template.tasks ?? []) } };
+  }
+  const tasks = (detail.template.tasks ?? []).map((t) =>
+    t.id === parentId ? { ...t, subtasks: sortByIds(t.subtasks ?? []) } : t,
+  );
+  return { ...detail, template: { ...detail.template, tasks } };
+}
+
 export function useReorderTemplateTasks(templateId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -109,7 +125,20 @@ export function useReorderTemplateTasks(templateId: string) {
       orderedIds: string[];
       parentId?: string | null;
     }) => templatesApi.reorderTasks(templateId, orderedIds, parentId),
-    onSuccess: () => {
+    // Optimistic: see useReorderTasks — prevents a snap-back while the
+    // refetch crosses the network.
+    onMutate: async ({ orderedIds, parentId }) => {
+      await queryClient.cancelQueries({ queryKey: ['templates', templateId] });
+      const previous = queryClient.getQueryData<TemplateDetail>(['templates', templateId]);
+      if (previous) {
+        queryClient.setQueryData(['templates', templateId], reorderInTemplate(previous, orderedIds, parentId));
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(['templates', templateId], context.previous);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['templates', templateId] });
     },
   });

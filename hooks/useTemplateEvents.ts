@@ -17,6 +17,8 @@ export function useTemplateEvents(templateId: string) {
 
     const interval = setInterval(() => {
       if (document.visibilityState === 'hidden') return;
+      // Skip while mutating — see useTaskListEvents for the race this avoids.
+      if (queryClient.isMutating() > 0) return;
       queryClient.invalidateQueries({ queryKey: ['templates', templateId] });
     }, POLL_INTERVAL_MS);
 

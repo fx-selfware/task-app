@@ -19,6 +19,10 @@ export function useTaskListEvents(listId: string) {
 
     const interval = setInterval(() => {
       if (document.visibilityState === 'hidden') return;
+      // A poll-triggered refetch mid-mutation would return pre-mutation data
+      // and clobber optimistic updates (visible as UI flicker over a slow
+      // network) — skip while any mutation is in flight.
+      if (queryClient.isMutating() > 0) return;
       queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
     }, POLL_INTERVAL_MS);
 
