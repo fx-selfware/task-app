@@ -1,130 +1,55 @@
 # Task App
 
-A full-stack task management application with sharing, templates, and admin user management.
+Shared task lists for family and friends: lists, subtasks, drag-and-drop ordering, live-ish updates, reusable templates, sharing with READ/WRITE permissions, and a small admin panel.
 
-**Stack**: React + Vite + Tailwind · Node.js + Fastify + Prisma · PostgreSQL · Caddy · nginx
-
----
-
-## Development
-
-```bash
-docker compose up --build   # first time or after dependency changes
-docker compose up           # day-to-day (hot reload via volume mount)
-```
-
-Migrations run automatically on backend startup. The frontend Vite dev server runs in a container with `./frontend/src` mounted for hot reload.
-Access the app at **http://localhost:8090**.
+**Stack**: Next.js (App Router) · React + Tailwind · SQLite dialect via [libsql](https://github.com/tursodatabase/libsql) (Drizzle ORM) · playwright-bdd for tests. Deploys to **Vercel + Turso** for free, or self-hosts as one Node process with a local SQLite file — same code, different `TURSO_DATABASE_URL`.
 
 ---
 
-## Production / VM Setup
-
-### Prerequisites
-
-- Azure VM (or any Ubuntu 22.04+ host) with Docker installed
-- Ports 80 and 443 open
-- A DNS name pointing at the VM's public IP (e.g. Azure DNS label: `<name>.<region>.cloudapp.azure.com`)
+## Quick start
 
 ```bash
-# Install Docker if needed
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER && newgrp docker
+git clone <this repo> && cd task-app
+cp .env.example .env        # defaults work for local dev
+npm install
+npm run dev                 # http://localhost:3000
 ```
 
-### First-time deploy
+Local dev uses an embedded SQLite file (`TURSO_DATABASE_URL=file:./data/app.db`), created and migrated automatically on first request — no database server, no Turso account needed. To make yourself an admin, put your email in `ADMIN_EMAILS` in `.env` before registering (or before your next login).
+
+## Testing
+
+All functional requirements live as Gherkin scenarios in `features/` — they are the spec, and the `@ac`-tagged e2e scenarios are the acceptance criteria (`grep -A1 "@ac" features/e2e/*.feature`).
 
 ```bash
-git clone git@github.com:fanxia0404/task-app.git /app/task-app
-cd /app/task-app
-cp .env.example .env
-nano .env   # fill in secrets (see below)
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+npm test              # everything: api + browser (chromium + mobile viewport)
+npm run test:api      # 72 API scenarios (fast, no browser)
+npm run test:e2e      # 26 browser scenarios, incl. mobile touch
 ```
 
-> **Why `-f` flags?** `docker-compose.override.yml` is a dev-only file (Vite dev server, port 8090). Production must use only `docker-compose.yml` + `docker-compose.prod.yml` to get Caddy HTTPS + the built nginx image.
+Locally the test runner boots `next dev` on port 8099 automatically (or reuses one you've started). In CI it tests the production build. First run needs `npx playwright install chromium`.
 
-### Environment variables
+## Deployment
 
-| Variable | Description |
-|---|---|
-| `POSTGRES_PASSWORD` | Strong random password (avoid `/`, `+`, `=` or URL-encode them in `DATABASE_URL`) |
-| `DATABASE_URL` | `postgresql://taskapp:<password>@db:5432/taskapp` |
-| `JWT_SECRET` | At least 32 random characters |
-| `COOKIE_SECURE` | `true` in production |
-| `DOMAIN` | FQDN for Caddy's auto TLS (e.g. `task-app-fx.westus2.cloudapp.azure.com`) |
-| `ADMIN_EMAILS` | Optional. Comma-separated emails that get admin role (e.g. `alice@example.com,bob@example.com`). Users matching these emails are promoted to admin on register or next login. Admins can view all users and reset passwords via the Admin page. |
+**Vercel + Turso (recommended, free):** import the repo at [vercel.com/new](https://vercel.com/new), add the Turso integration from the Vercel Marketplace (provisions the database and injects `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`), set `JWT_SECRET`, deploy. Pushes to `main` auto-deploy; PRs get preview URLs. Migrations run during the build (`vercel-build`).
 
-### Verify
+**Self-host:** the same code runs as one Node process against a local SQLite file — no Turso account required. **Docker:** one optional `Dockerfile`. Details for all paths: **[deploy/README.md](deploy/README.md)**.
+
+GitHub Actions runs the full BDD suite on every push/PR; deploys are Vercel's job, so forks need zero CI setup.
+
+## Customizing
+
+- Schema lives in `db/schema.ts` (Drizzle). After changing it: `npm run db:generate` writes SQL migrations to `drizzle/`, applied automatically on boot.
+- API route handlers are in `app/api/`, one directory per resource, delegating to `lib/services/`.
+- Pages/components are plain client-side React with react-query in `app/`, `components/`, `hooks/`.
+- Add scenarios to `features/` first — the suite is the safety net that keeps your fork working.
+
+## Migrating data from the v1 stack (Postgres)
+
+If you ran the previous Fastify+Prisma+Postgres version, `scripts/migrate-from-postgres.ts` copies everything (including bcrypt password hashes — logins keep working) into a fresh SQLite file and verifies row counts + foreign-key integrity:
 
 ```bash
-curl https://<your-domain>/api/auth/me
-# → {"error":"Unauthorized"}  (expected — API is working)
+PG_URL=postgresql://user:pass@localhost:5432/taskapp SQLITE_PATH=./data/app.db npx tsx scripts/migrate-from-postgres.ts
 ```
 
----
-
-## CI / CD
-
-Every push to `main` triggers the GitHub Actions workflow:
-
-1. **Test** — runs backend BDD tests and E2E stack build in parallel, then runs Playwright E2E tests
-2. **Build** — builds backend and frontend images in parallel (matrix strategy) and pushes to GHCR; skipped if no deploy-worthy files changed
-3. **Deploy** — SSHes into the VM, pulls images, and restarts containers (migrations run on startup)
-
-### GitHub Secrets required
-
-| Secret | Value |
-|---|---|
-| `VM_HOST` | Public IP or DNS of the VM |
-| `VM_USER` | SSH username (e.g. `azureuser`) |
-| `VM_SSH_KEY` | Private key for SSH access |
-
-### Generate a deploy key (on the VM)
-
-```bash
-ssh-keygen -t ed25519 -f ~/.ssh/deploy_key -N ""
-cat ~/.ssh/deploy_key.pub >> ~/.ssh/authorized_keys
-cat ~/.ssh/deploy_key   # copy this → GitHub secret VM_SSH_KEY
-```
-
----
-
-## HTTPS
-
-Caddy (in `docker-compose.prod.yml`) automatically obtains and renews a Let's Encrypt TLS certificate for the domain set in the `DOMAIN` environment variable. No manual certificate setup is needed — just ensure ports 80 and 443 are reachable and `DOMAIN` resolves to the VM's IP.
-
----
-
-## Running tests manually
-
-### Acceptance criteria tests
-
-The acceptance criteria live as `@ac`-tagged Gherkin scenarios in `e2e/features/`. To see them:
-
-```bash
-grep -A1 "@ac" e2e/features/**/*.feature
-```
-
-To run them against the full stack:
-
-```bash
-COMMIT_SHA=$(git rev-parse HEAD) docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
-npm --prefix e2e install && BASE_URL=http://localhost:8099 npm --prefix e2e run test:ac
-docker compose -f docker-compose.yml -f docker-compose.test.yml down
-```
-
-### Full test suite
-
-```bash
-# Backend BDD tests (API layer)
-docker compose -f docker-compose.yml -f docker-compose.test.yml run --build --rm backend-test
-
-# All E2E tests (clean DB, port 8099)
-COMMIT_SHA=$(git rev-parse HEAD) docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
-npm --prefix e2e install && BASE_URL=http://localhost:8099 npm --prefix e2e test
-docker compose -f docker-compose.yml -f docker-compose.test.yml down
-
-# View HTML test report (after a test run)
-npx --prefix e2e playwright show-report e2e/playwright-report
-```
+The resulting file can be used directly (`TURSO_DATABASE_URL=file:./data/app.db`) or imported into Turso: `turso db create taskapp --from-file data/app.db`.
