@@ -1,6 +1,6 @@
 # Task App
 
-Shared task lists for family and friends: lists, subtasks, drag-and-drop ordering, live-ish updates, reusable templates, sharing with READ/WRITE permissions, and a small admin panel.
+Shared task lists for family and friends: lists, subtasks, drag-and-drop ordering, live-ish updates, reusable templates, sharing with READ/WRITE permissions, and a small admin panel. Installable as a PWA on desktop and mobile.
 
 **Stack**: Next.js (App Router) · React + Tailwind · SQLite dialect via [libsql](https://github.com/tursodatabase/libsql) (Drizzle ORM) · playwright-bdd for tests. Deploys to **Vercel + Turso** for free, or self-hosts as one Node process with a local SQLite file — same code, different `TURSO_DATABASE_URL`.
 
