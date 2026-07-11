@@ -3,6 +3,7 @@
 ## Workflow
 
 - **Isolate work in a git worktree on its own branch**, never commit directly on `main`. Commit as you go, push the branch, and open a PR — don't push straight to `main` or merge without review.
+- **Before opening the PR, run a subagent code review of the diff** covering both logic (correctness, edge cases, test coverage) and security (auth checks, input validation, injection). Fix what it finds, or note in the PR description why a finding was skipped.
 - **Always run `npm run test:api`** after any change to `app/api/`, `lib/`, or `db/`. Do not consider work complete until it passes.
 - **Always run `npm run test:e2e`** after any change to `app/` pages, `components/`, or `hooks/`. Do not consider work complete until it passes.
 - **Mobile matters** — iOS Safari/Chrome and Android Chrome equally. Use `text-base sm:text-sm` on inputs to prevent auto-zoom, test touch interactions, respect mobile viewports.
