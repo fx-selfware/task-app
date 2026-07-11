@@ -43,6 +43,10 @@ Browser → Next.js → app/api/**/route.ts → lib/services/*.ts → libsql (Dr
 - Live updates: `hooks/useTaskListEvents.ts` / `useTemplateEvents.ts` poll (react-query invalidation every 3s, paused when the tab is hidden). There is no server push.
 - Routes map 1:1 to resources under `app/api/`: auth, task-lists, tasks (nested), shares, templates, template-shares, admin. Each delegates to a matching `lib/services/` file.
 
+### PWA
+
+The app is installable. `app/manifest.ts` is the web manifest; icons (`app/icon.tsx`, `app/apple-icon.tsx`, and the manifest-sized `app/icon-192/route.tsx` / `app/icon-512/route.tsx`) are generated at build time with `next/og`'s `ImageResponse` from the shared mark in `app/icon-mark.tsx` — no binary image assets checked in. `public/sw.js`, registered by `components/ServiceWorkerRegister.tsx` from the root layout, is a minimal service worker: cache-first for content-hashed `_next/static/` assets (safe indefinitely — a new deploy ships new filenames), network-first for navigations with `/offline` as the fallback. It never intercepts `/api/*` — shared task data is never cached client-side, consistent with the polling-only live-update model above. Bump `CACHE_NAME` in `sw.js` if its caching logic changes.
+
 ### Database
 
 Schema: `db/schema.ts` (Drizzle, SQLite). Data model: `users` (role USER/ADMIN) → `task_lists` → `tasks` (ordered by `order`, self-ref `parent_id` for subtasks) + `task_list_shares` (READ/WRITE). `task_templates` → `template_tasks` + `template_shares` (same model). IDs are cuid2 strings.
