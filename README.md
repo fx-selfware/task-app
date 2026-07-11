@@ -5,9 +5,11 @@ Shared task lists for family and friends: lists, subtasks, drag-and-drop orderin
 **Stack**: Next.js (App Router) · React + Tailwind · SQLite dialect via [libsql](https://github.com/tursodatabase/libsql) (Drizzle ORM) · playwright-bdd for tests. Deploys to **Vercel + Turso** for free.
 
 <p align="center">
-  <img src="screenshots/templating.png" width="260" alt="A Weekly Chores template with tasks and a subtask">
+  <img src="screenshots/tasklist.png" width="230" alt="A task list with a subtask and a completed task">
   &nbsp;&nbsp;
-  <img src="screenshots/sharing.png" width="260" alt="Sharing a task list with READ/WRITE permissions">
+  <img src="screenshots/templating.png" width="230" alt="A Weekly Chores template with tasks and a subtask">
+  &nbsp;&nbsp;
+  <img src="screenshots/sharing.png" width="230" alt="Sharing a task list with READ/WRITE permissions">
 </p>
 
 ---
