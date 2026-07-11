@@ -1,4 +1,6 @@
-name: Test & Deploy
+# Tests only — deploys are handled by Vercel's git integration (every push to
+# main goes to production, every PR gets a preview deployment).
+name: Test
 
 on:
   push:
@@ -39,39 +41,3 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
-
-  # Opt-in: set repo variable DEPLOY_ENABLED=true plus secrets VM_HOST, VM_USER,
-  # VM_SSH_KEY. For arm64 VMs (e.g. Oracle Ampere) set repo variable
-  # DEPLOY_RUNNER=ubuntu-24.04-arm so the native better-sqlite3 build matches.
-  deploy:
-    needs: test
-    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
-    runs-on: ${{ vars.DEPLOY_RUNNER || 'ubuntu-latest' }}
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      - name: Build standalone bundle
-        run: |
-          npm run build
-          cp -r .next/static .next/standalone/.next/static
-          cp -r drizzle .next/standalone/drizzle
-
-      - name: Deploy over SSH
-        env:
-          VM_HOST: ${{ secrets.VM_HOST }}
-          VM_USER: ${{ secrets.VM_USER }}
-          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$VM_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
-          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" .next/standalone/ "$VM_USER@$VM_HOST:/opt/task-app/"
-          ssh -i ~/.ssh/deploy_key "$VM_USER@$VM_HOST" "sudo systemctl restart task-app"
-          echo "Deploy complete"

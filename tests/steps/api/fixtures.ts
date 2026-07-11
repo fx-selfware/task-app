@@ -80,7 +80,7 @@ export class ApiWorld {
 
 export const test = base.extend<{ world: ApiWorld }>({
   world: async ({ baseURL }, use) => {
-    resetDb();
+    await resetDb();
     await use(new ApiWorld(baseURL!));
   },
 });

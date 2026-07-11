@@ -1,9 +1,0 @@
-# Caddy reverse proxy with automatic HTTPS (Let's Encrypt).
-# Install caddy, put this at /etc/caddy/Caddyfile (replace the domain), then:
-#   sudo systemctl reload caddy
-# Ports 80 and 443 must be open in your cloud firewall / security list.
-
-tasks.example.com {
-	reverse_proxy localhost:3000
-	encode gzip
-}

@@ -25,12 +25,12 @@ export interface PublicUser {
 }
 
 export async function registerUser(db: Db, input: RegisterInput): Promise<PublicUser> {
-  const existing = db.select({ id: users.id }).from(users).where(eq(users.email, input.email)).get();
+  const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email)).get();
   if (existing) httpError(409, 'Email already in use');
 
   const passwordHash = await bcrypt.hash(input.password, 12);
   const role: Role = getAdminEmails().has(input.email.toLowerCase()) ? 'ADMIN' : 'USER';
-  const user = db
+  const user = await db
     .insert(users)
     .values({ email: input.email, passwordHash, name: input.name, role })
     .returning({ id: users.id, email: users.email, name: users.name, role: users.role, createdAt: users.createdAt })
@@ -40,7 +40,7 @@ export async function registerUser(db: Db, input: RegisterInput): Promise<Public
 }
 
 export async function loginUser(db: Db, input: LoginInput): Promise<PublicUser> {
-  const user = db.select().from(users).where(eq(users.email, input.email)).get();
+  const user = await db.select().from(users).where(eq(users.email, input.email)).get();
   if (!user) httpError(401, 'Invalid credentials');
 
   const valid = await bcrypt.compare(input.password, user.passwordHash);
@@ -49,13 +49,13 @@ export async function loginUser(db: Db, input: LoginInput): Promise<PublicUser> 
   // Promote or demote role based on current ADMIN_EMAILS config
   const expectedRole: Role = getAdminEmails().has(user.email.toLowerCase()) ? 'ADMIN' : 'USER';
   if (user.role !== expectedRole) {
-    db.update(users).set({ role: expectedRole }).where(eq(users.id, user.id)).run();
+    await db.update(users).set({ role: expectedRole }).where(eq(users.id, user.id)).run();
   }
 
   return { id: user.id, email: user.email, name: user.name, role: expectedRole, createdAt: user.createdAt };
 }
 
-export function getUserById(db: Db, userId: string): PublicUser | undefined {
+export async function getUserById(db: Db, userId: string): Promise<PublicUser | undefined> {
   return db
     .select({ id: users.id, email: users.email, name: users.name, role: users.role, createdAt: users.createdAt })
     .from(users)

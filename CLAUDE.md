@@ -20,32 +20,34 @@ npm test                # full BDD suite: api + chromium + mobile-chrome (boots 
 npm run test:api        # 72 API scenarios only (fast, no browser)
 npm run test:e2e        # 26 browser scenarios only
 npm run db:generate     # regenerate SQL migrations after editing db/schema.ts
+npm run db:migrate      # apply migrations explicitly (Vercel runs this in vercel-build)
 ```
 
 Tests reuse a dev server you already have on port 8099 (`TEST_PORT` overrides). `npx playwright install chromium` once per machine. Note: `next dev` and `next build` share `.next/`, so run `npm run build` again before `next start`-based smoke tests if you used the dev server since.
 
 ## Architecture
 
-Single Node process: Next.js App Router serves both the React UI and the JSON API. SQLite is the whole persistence layer (one file, WAL mode, migrations auto-applied on boot by `lib/db.ts`).
+Next.js App Router serves both the React UI and the JSON API. Persistence is the SQLite dialect via `@libsql/client`: a local file (`file:` URL) in dev/tests/self-host, a remote Turso database (`libsql://` URL) in production on Vercel. Same code, different URL. Production runs serverless — NO in-process state may be relied on (no module-scope caches, no pub/sub; that's why live updates are polling, not SSE).
 
 ```
-Browser → Next.js → app/api/**/route.ts → lib/services/*.ts → SQLite (Drizzle)
+Browser → Next.js → app/api/**/route.ts → lib/services/*.ts → libsql (Drizzle)
                   → app/**/page.tsx (client components, react-query, dnd-kit)
 ```
 
 ### Server
 
-- `lib/db.ts` — `getDb()` singleton: better-sqlite3 (SYNCHRONOUS — `.get()/.all()/.run()`, `db.transaction(cb)` sync) + Drizzle, runs `drizzle/` migrations on open.
+- `lib/db.ts` — `getDb(): Promise<Db>` memoized singleton. ASYNC: every drizzle call is awaited (`await ….get()/.all()/.run()`, `await db.transaction(async (tx) => …)`). For `file:` URLs it enables WAL + FK enforcement and auto-applies `drizzle/` migrations on open; remote Turso gets migrations at build time (`vercel-build`) and enforces FKs server-side.
+- **Round trips matter** (remote Turso pays network latency per statement): use `db.batch([...])` for multi-statement writes (see `reorderTasks`) and joins/`inArray` instead of per-row lookups. Don't reintroduce N+1 loops.
 - `lib/auth.ts` — JWT in `token` HttpOnly cookie; `requireAuth(request)` returns the payload or throws 401; `requireAdmin` throws 403 for non-admins. Admin role driven by `ADMIN_EMAILS` env on register/login (promote AND demote).
 - `lib/apiHandler.ts` — `handle()` wraps every route handler; thrown `HttpError` → `{error}` JSON with its status.
-- `lib/events.ts` + the `**/events/route.ts` SSE routes — in-process pub/sub for live updates (list channel = list id, template channel = `template:<id>`). Valid only while the app is one process.
+- Live updates: `hooks/useTaskListEvents.ts` / `useTemplateEvents.ts` poll (react-query invalidation every 3s, paused when the tab is hidden). There is no server push.
 - Routes map 1:1 to resources under `app/api/`: auth, task-lists, tasks (nested), shares, templates, template-shares, admin. Each delegates to a matching `lib/services/` file.
 
 ### Database
 
 Schema: `db/schema.ts` (Drizzle, SQLite). Data model: `users` (role USER/ADMIN) → `task_lists` → `tasks` (ordered by `order`, self-ref `parent_id` for subtasks) + `task_list_shares` (READ/WRITE). `task_templates` → `template_tasks` + `template_shares` (same model). IDs are cuid2 strings.
 
-Schema change flow: edit `db/schema.ts` → `npm run db:generate` → commit the new `drizzle/*.sql` — it applies automatically on next boot everywhere (dev, tests, prod).
+Schema change flow: edit `db/schema.ts` → `npm run db:generate` → commit the new `drizzle/*.sql`. It applies automatically on next boot for `file:` databases (dev, tests, self-host) and at build time on Vercel (`vercel-build` runs `drizzle-kit migrate` against Turso).
 
 ### Testing
 
@@ -57,11 +59,11 @@ One BDD toolchain (playwright-bdd), two layers, all features in `features/`:
 
 ### Environment variables
 
-`SQLITE_PATH` (default `./data/app.db`), `JWT_SECRET` (required, 16+ chars), `COOKIE_SECURE` (`false` dev, `true` behind HTTPS), `ADMIN_EMAILS` (optional, comma-separated). See `.env.example`.
+`TURSO_DATABASE_URL` (default `file:./data/app.db`; `libsql://…` in prod), `TURSO_AUTH_TOKEN` (remote DBs only), `JWT_SECRET` (required, 16+ chars), `COOKIE_SECURE` (defaults to secure when `VERCEL_ENV` is set; `false` for local http), `ADMIN_EMAILS` (optional, comma-separated). See `.env.example`.
 
 ### Deployment
 
-Single process; see `deploy/README.md` (local + Tailscale, generic VM systemd + Caddy, Oracle Free ARM walkthrough, optional Dockerfile). CI (`.github/workflows/deploy.yml`): test job on every push/PR; deploy job only when repo variable `DEPLOY_ENABLED=true`, uses `DEPLOY_RUNNER` variable (`ubuntu-24.04-arm` for arm64 VMs — better-sqlite3 is a native module, build arch must match the VM) and secrets `VM_HOST`, `VM_USER`, `VM_SSH_KEY`; rsyncs the Next standalone output + `drizzle/` and restarts systemd. Backups = copy the SQLite file.
+Production is Vercel (git integration deploys `main`; PRs get preview URLs) + Turso via the Vercel Marketplace integration. CI (`.github/workflows/deploy.yml`) runs tests only. Self-host and Docker paths in `deploy/README.md` use the same code with a `file:` URL. Backups: `turso db shell <db> .dump` (prod) or copy the SQLite file (self-host).
 
 ### History
 

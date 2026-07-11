@@ -1,15 +1,21 @@
 import { z } from 'zod';
 
 const envSchema = z.object({
-  SQLITE_PATH: z.string().min(1).default('./data/app.db'),
+  TURSO_DATABASE_URL: z.string().min(1).default('file:./data/app.db'),
+  TURSO_AUTH_TOKEN: z.string().optional(),
   JWT_SECRET: z.string().min(16),
   COOKIE_SECURE: z
     .string()
     .transform((v) => v === 'true')
-    .default('false'),
+    .optional(),
 });
 
-type Config = z.infer<typeof envSchema>;
+export interface Config {
+  TURSO_DATABASE_URL: string;
+  TURSO_AUTH_TOKEN?: string;
+  JWT_SECRET: string;
+  COOKIE_SECURE: boolean;
+}
 
 let cached: Config | null = null;
 
@@ -20,7 +26,12 @@ export function getConfig(): Config {
     if (!parsed.success) {
       throw new Error(`Invalid environment variables: ${JSON.stringify(parsed.error.flatten().fieldErrors)}`);
     }
-    cached = parsed.data;
+    cached = {
+      ...parsed.data,
+      // Default to secure cookies whenever we're running on Vercel (always
+      // HTTPS there); local http dev sets COOKIE_SECURE=false in .env.
+      COOKIE_SECURE: parsed.data.COOKIE_SECURE ?? Boolean(process.env.VERCEL_ENV),
+    };
   }
   return cached;
 }

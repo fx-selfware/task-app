@@ -6,14 +6,14 @@ import { defineBddConfig } from 'playwright-bdd';
 // TEST_PORT override lets parallel checkouts run tests without colliding.
 const TEST_PORT = Number(process.env.TEST_PORT ?? 8099);
 const BASE_URL = process.env.BASE_URL ?? `http://localhost:${TEST_PORT}`;
-const TEST_DB = path.join(__dirname, '.test', 'test.db');
+const TEST_DB_URL = `file:${path.join(__dirname, '.test', 'test.db')}`;
 
 // The test runner (steps reset the DB directly) and the web server must agree
 // on the SQLite file. This module is loaded by every Playwright worker.
-process.env.SQLITE_PATH ??= TEST_DB;
+process.env.TURSO_DATABASE_URL ??= TEST_DB_URL;
 
 const serverEnv = {
-  SQLITE_PATH: TEST_DB,
+  TURSO_DATABASE_URL: TEST_DB_URL,
   JWT_SECRET: 'test-jwt-secret-at-least-32-chars!',
   COOKIE_SECURE: 'false',
   ADMIN_EMAILS: 'admin@example.com,admin@test.com',

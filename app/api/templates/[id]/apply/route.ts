@@ -12,7 +12,8 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
 
     if (!taskListId) return jsonError(400, 'taskListId is required');
 
-    const tasks = applyTemplate(getDb(), id, taskListId, user.userId);
+    const db = await getDb();
+    const tasks = await applyTemplate(db, id, taskListId, user.userId);
     return NextResponse.json({ tasks }, { status: 201 });
   });
 }

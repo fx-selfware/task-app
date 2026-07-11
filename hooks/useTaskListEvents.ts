@@ -3,30 +3,36 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
+const POLL_INTERVAL_MS = 3000;
+
+/**
+ * Live-ish updates via polling. This replaced an SSE/EventSource
+ * implementation when the app moved to serverless hosting: in-process
+ * pub/sub can't reach subscribers held by other function instances.
+ * Polling is skipped while the tab is hidden.
+ */
 export function useTaskListEvents(listId: string) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!listId) return;
 
-    let isFirstOpen = true;
-    const eventSource = new EventSource(`/api/task-lists/${listId}/events`);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
+    }, POLL_INTERVAL_MS);
 
-    eventSource.onopen = () => {
-      if (isFirstOpen) {
-        isFirstOpen = false;
-        return; // Skip invalidation on first open; useQuery already fetches it
+    // Refetch immediately when the tab becomes visible again
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
       }
-      // Refetch on reconnection after a connection drop
-      queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
     };
-
-    eventSource.onmessage = () => {
-      queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
-    };
+    document.addEventListener('visibilitychange', onVisible);
 
     return () => {
-      eventSource.close();
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [listId, queryClient]);
 }

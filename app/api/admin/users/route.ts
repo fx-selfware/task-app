@@ -7,7 +7,8 @@ import { listUsers } from '@/lib/services/admin';
 export async function GET(request: NextRequest) {
   return handle(async () => {
     requireAdmin(request);
-    const users = listUsers(getDb());
+    const db = await getDb();
+    const users = await listUsers(db);
     return NextResponse.json({ users });
   });
 }

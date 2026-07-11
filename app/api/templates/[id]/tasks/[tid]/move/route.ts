@@ -3,7 +3,6 @@ import { handle, jsonError, readJson } from '@/lib/apiHandler';
 import { requireAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { moveTemplateTask } from '@/lib/services/templates';
-import { publish } from '@/lib/events';
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string; tid: string }> }) {
   return handle(async () => {
@@ -15,8 +14,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       return jsonError(400, 'parentId is required (string or null)');
     }
 
-    const task = moveTemplateTask(getDb(), id, tid, user.userId, parentId);
-    publish(`template:${id}`);
+    const db = await getDb();
+    const task = await moveTemplateTask(db, id, tid, user.userId, parentId);
     return NextResponse.json({ task });
   });
 }

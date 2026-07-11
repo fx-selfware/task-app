@@ -7,8 +7,8 @@ import { resetDb } from './resetDb';
  * the same inode, so file deletion would silently split server and test
  * runner onto two different databases.
  */
-export default function globalSetup() {
-  const dbPath = process.env.SQLITE_PATH;
-  if (!dbPath || !dbPath.includes('.test')) return; // never touch a real DB
-  resetDb(); // getDb() creates + migrates the file if it doesn't exist yet
+export default async function globalSetup() {
+  const dbUrl = process.env.TURSO_DATABASE_URL;
+  if (!dbUrl || !dbUrl.includes('.test')) return; // never touch a real DB
+  await resetDb(); // getDb() creates + migrates the file if it doesn't exist yet
 }

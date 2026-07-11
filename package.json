@@ -9,16 +9,18 @@
     "test": "bddgen && playwright test",
     "test:api": "bddgen && playwright test --project=api",
     "test:e2e": "bddgen && playwright test --project=chromium --project=mobile-chrome",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "vercel-build": "drizzle-kit migrate && next build"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@libsql/client": "^0.17.4",
     "@paralleldrive/cuid2": "^2.2.2",
     "@tanstack/react-query": "^5.62.2",
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^12.2.0",
     "drizzle-orm": "^0.44.2",
     "jsonwebtoken": "^9.0.2",
     "next": "^15.5.0",
@@ -36,6 +38,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",
+    "better-sqlite3": "^12.11.1",
     "drizzle-kit": "^0.31.1",
     "pg": "^8.22.0",
     "playwright-bdd": "^9.2.0",

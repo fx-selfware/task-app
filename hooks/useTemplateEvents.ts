@@ -3,29 +3,33 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
+const POLL_INTERVAL_MS = 3000;
+
+/**
+ * Live-ish updates via polling — see useTaskListEvents for why this is not
+ * SSE anymore.
+ */
 export function useTemplateEvents(templateId: string) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!templateId) return;
 
-    let isFirstOpen = true;
-    const eventSource = new EventSource(`/api/templates/${templateId}/events`);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      queryClient.invalidateQueries({ queryKey: ['templates', templateId] });
+    }, POLL_INTERVAL_MS);
 
-    eventSource.onopen = () => {
-      if (isFirstOpen) {
-        isFirstOpen = false;
-        return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        queryClient.invalidateQueries({ queryKey: ['templates', templateId] });
       }
-      queryClient.invalidateQueries({ queryKey: ['templates', templateId] });
     };
-
-    eventSource.onmessage = () => {
-      queryClient.invalidateQueries({ queryKey: ['templates', templateId] });
-    };
+    document.addEventListener('visibilitychange', onVisible);
 
     return () => {
-      eventSource.close();
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [templateId, queryClient]);
 }

@@ -14,7 +14,8 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       return jsonError(400, 'newPassword must be at least 8 characters');
     }
 
-    await resetUserPassword(getDb(), id, newPassword);
+    const db = await getDb();
+    await resetUserPassword(db, id, newPassword);
     return NextResponse.json({ ok: true });
   });
 }

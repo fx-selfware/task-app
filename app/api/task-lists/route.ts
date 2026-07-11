@@ -7,7 +7,8 @@ import { createTaskList, getTaskLists } from '@/lib/services/taskLists';
 export async function GET(request: NextRequest) {
   return handle(async () => {
     const user = requireAuth(request);
-    const result = getTaskLists(getDb(), user.userId);
+    const db = await getDb();
+    const result = await getTaskLists(db, user.userId);
     return NextResponse.json(result);
   });
 }
@@ -18,7 +19,8 @@ export async function POST(request: NextRequest) {
     const { name } = (await readJson(request)) as { name?: string };
     if (!name) return jsonError(400, 'name is required');
 
-    const list = createTaskList(getDb(), user.userId, name);
+    const db = await getDb();
+    const list = await createTaskList(db, user.userId, name);
     return NextResponse.json({ list }, { status: 201 });
   });
 }

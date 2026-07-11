@@ -4,7 +4,6 @@ import { requireAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { checkWriteAccess } from '@/lib/services/taskLists';
 import { moveTask } from '@/lib/services/tasks';
-import { publish } from '@/lib/events';
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string; tid: string }> }) {
   return handle(async () => {
@@ -16,9 +15,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       return jsonError(400, 'parentId is required (string or null)');
     }
 
-    checkWriteAccess(getDb(), id, user.userId);
-    const task = moveTask(getDb(), id, tid, parentId);
-    publish(id);
+    const db = await getDb();
+    await checkWriteAccess(db, id, user.userId);
+    const task = await moveTask(db, id, tid, parentId);
     return NextResponse.json({ task });
   });
 }

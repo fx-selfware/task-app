@@ -3,7 +3,6 @@ import { handle, jsonError, readJson } from '@/lib/apiHandler';
 import { requireAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { deleteShare, updateShare } from '@/lib/services/shares';
-import { publish } from '@/lib/events';
 import type { Permission } from '@/db/schema';
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string; shareId: string }> }) {
@@ -14,8 +13,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
     if (!permission) return jsonError(400, 'permission is required');
 
-    const share = updateShare(getDb(), id, shareId, user.userId, permission);
-    publish(id);
+    const db = await getDb();
+    const share = await updateShare(db, id, shareId, user.userId, permission);
     return NextResponse.json({ share });
   });
 }
@@ -25,8 +24,8 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     const { id, shareId } = await ctx.params;
     const user = requireAuth(request);
 
-    deleteShare(getDb(), id, shareId, user.userId);
-    publish(id);
+    const db = await getDb();
+    await deleteShare(db, id, shareId, user.userId);
     return new NextResponse(null, { status: 204 });
   });
 }

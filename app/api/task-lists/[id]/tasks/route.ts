@@ -4,7 +4,6 @@ import { requireAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { checkWriteAccess } from '@/lib/services/taskLists';
 import { createTask } from '@/lib/services/tasks';
-import { publish } from '@/lib/events';
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   return handle(async () => {
@@ -18,9 +17,9 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
 
     if (!title) return jsonError(400, 'title is required');
 
-    checkWriteAccess(getDb(), id, user.userId);
-    const task = createTask(getDb(), id, { title, description, parentId });
-    publish(id);
+    const db = await getDb();
+    await checkWriteAccess(db, id, user.userId);
+    const task = await createTask(db, id, { title, description, parentId });
     return NextResponse.json({ task }, { status: 201 });
   });
 }

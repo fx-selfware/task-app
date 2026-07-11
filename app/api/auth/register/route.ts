@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return jsonError(400, 'email, password, and name are required');
     }
 
-    const user = await registerUser(getDb(), { email, password, name });
+    const user = await registerUser(await getDb(), { email, password, name });
     const token = signToken(user.id, user.email, user.role);
     const response = NextResponse.json({ user }, { status: 201 });
     response.cookies.set('token', token, authCookieOptions());

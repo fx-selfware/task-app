@@ -4,7 +4,6 @@ import { requireAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { checkWriteAccess } from '@/lib/services/taskLists';
 import { reorderTasks } from '@/lib/services/tasks';
-import { publish } from '@/lib/events';
 
 export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   return handle(async () => {
@@ -19,9 +18,9 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
       return jsonError(400, 'orderedIds must be an array');
     }
 
-    checkWriteAccess(getDb(), id, user.userId);
-    reorderTasks(getDb(), id, orderedIds as string[], parentId ?? null);
-    publish(id);
+    const db = await getDb();
+    await checkWriteAccess(db, id, user.userId);
+    await reorderTasks(db, id, orderedIds as string[], parentId ?? null);
     return NextResponse.json({ ok: true });
   });
 }

@@ -3,7 +3,6 @@ import { handle, jsonError, readJson } from '@/lib/apiHandler';
 import { requireAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { deleteTemplateShare, updateTemplateShare } from '@/lib/services/template-shares';
-import { publish } from '@/lib/events';
 import type { Permission } from '@/db/schema';
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string; sid: string }> }) {
@@ -14,8 +13,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
     if (!permission) return jsonError(400, 'permission is required');
 
-    const share = updateTemplateShare(getDb(), id, sid, user.userId, permission);
-    publish(`template:${id}`);
+    const db = await getDb();
+    const share = await updateTemplateShare(db, id, sid, user.userId, permission);
     return NextResponse.json({ share });
   });
 }
@@ -25,8 +24,8 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     const { id, sid } = await ctx.params;
     const user = requireAuth(request);
 
-    deleteTemplateShare(getDb(), id, sid, user.userId);
-    publish(`template:${id}`);
+    const db = await getDb();
+    await deleteTemplateShare(db, id, sid, user.userId);
     return new NextResponse(null, { status: 204 });
   });
 }

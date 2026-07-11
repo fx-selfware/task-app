@@ -3,7 +3,6 @@ import { handle, jsonError, readJson } from '@/lib/apiHandler';
 import { requireAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { reorderTemplateTasks } from '@/lib/services/templates';
-import { publish } from '@/lib/events';
 
 export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   return handle(async () => {
@@ -18,8 +17,8 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
       return jsonError(400, 'orderedIds must be an array');
     }
 
-    reorderTemplateTasks(getDb(), id, user.userId, orderedIds as string[], parentId ?? null);
-    publish(`template:${id}`);
+    const db = await getDb();
+    await reorderTemplateTasks(db, id, user.userId, orderedIds as string[], parentId ?? null);
     return NextResponse.json({ ok: true });
   });
 }
