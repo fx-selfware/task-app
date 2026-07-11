@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+next-env.d.ts
+
+# SQLite data + test DBs
+data/
+.test/
+
+# Playwright / BDD
+.features-gen/
+playwright-report/
+test-results/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / tools
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
