@@ -3,121 +3,75 @@ name: Test & Deploy
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '*.md'
-      - 'docs/**'
-      - '.env.example'
-      - '.gitignore'
-      - 'docker-compose.override.yml'
+  pull_request:
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    outputs:
-      should-deploy: ${{ steps.filter.outputs.app }}
-
     steps:
       - uses: actions/checkout@v6
 
-      - name: Check for deploy-worthy changes
-        uses: dorny/paths-filter@v4
-        id: filter
+      - uses: actions/setup-node@v6
         with:
-          filters: |
-            app:
-              - 'backend/**'
-              - 'frontend/**'
-              - 'nginx/**'
-              - 'Caddyfile'
-              - 'docker-compose.yml'
-              - 'docker-compose.prod.yml'
-              - '.github/workflows/**'
+          node-version: 22
+          cache: npm
 
-      - name: Run backend tests & build E2E stack
-        run: |
-          docker compose -f docker-compose.yml -f docker-compose.test.yml run --build --rm backend-test &
-          BDD_PID=$!
-          docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V db backend frontend
-          wait $BDD_PID
-        env:
-          COMMIT_SHA: ${{ github.sha }}
+      - run: npm ci
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ hashFiles('e2e/package-lock.json') }}
+          key: playwright-${{ hashFiles('package-lock.json') }}
 
-      - name: Install Playwright
-        run: npm --prefix e2e install && npx --prefix e2e playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium
 
-      - name: Run E2E tests
-        run: npm --prefix e2e test
-        env:
-          BASE_URL: http://localhost:8099
+      - name: Build
+        run: npm run build
 
-      - name: Stop stack
-        if: always()
-        run: docker compose -f docker-compose.yml -f docker-compose.test.yml down -v
+      # webServer runs `next start` against the build above (see playwright.config.ts)
+      - name: BDD tests (api + e2e)
+        run: npm test
 
-  build:
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # Opt-in: set repo variable DEPLOY_ENABLED=true plus secrets VM_HOST, VM_USER,
+  # VM_SSH_KEY. For arm64 VMs (e.g. Oracle Ampere) set repo variable
+  # DEPLOY_RUNNER=ubuntu-24.04-arm so the native better-sqlite3 build matches.
+  deploy:
     needs: test
-    if: github.ref == 'refs/heads/main' && needs.test.outputs.should-deploy == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      matrix:
-        service: [backend, frontend]
-      fail-fast: false
-
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ${{ vars.DEPLOY_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
+      - uses: actions/setup-node@v6
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          node-version: 22
+          cache: npm
 
-      - name: Build and push image
-        uses: docker/build-push-action@v7
-        with:
-          context: ./${{ matrix.service }}
-          target: production
-          push: true
-          tags: ghcr.io/fanxia0404/task-app-${{ matrix.service }}:latest
-          build-args: ${{ matrix.service == 'frontend' && format('COMMIT_SHA={0}', github.sha) || '' }}
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+      - run: npm ci
 
-  deploy:
-    needs: [test, build]
-    if: github.ref == 'refs/heads/main' && needs.test.outputs.should-deploy == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
+      - name: Build standalone bundle
+        run: |
+          npm run build
+          cp -r .next/static .next/standalone/.next/static
+          cp -r drizzle .next/standalone/drizzle
 
-    steps:
-      - name: Deploy to Azure VM
-        uses: appleboy/ssh-action@v1
+      - name: Deploy over SSH
         env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          envs: GHCR_TOKEN
-          script: |
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            cd /app/task-app
-            git pull origin main
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backend frontend
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
-            docker logout ghcr.io
-            echo "Deploy complete"
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$VM_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" .next/standalone/ "$VM_USER@$VM_HOST:/opt/task-app/"
+          ssh -i ~/.ssh/deploy_key "$VM_USER@$VM_HOST" "sudo systemctl restart task-app"
+          echo "Deploy complete"

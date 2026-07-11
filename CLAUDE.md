@@ -6,83 +6,63 @@
 
 ## Workflow Rules
 
-- **Always run backend BDD tests** after any backend change. Do not consider work complete until they pass.
-- **Always run E2E tests** after any frontend change. Do not consider work complete until they pass.
+- **Always run `npm run test:api`** after any change to `app/api/`, `lib/`, or `db/`. Do not consider work complete until it passes.
+- **Always run `npm run test:e2e`** after any change to `app/` pages, `components/`, or `hooks/`. Do not consider work complete until it passes.
 - **Mobile matters** — iOS Safari/Chrome and Android Chrome equally. Use `text-base sm:text-sm` on inputs to prevent auto-zoom, test touch interactions, respect mobile viewports.
 - **Update all relevant docs** (CLAUDE.md + README.md) together, not just one.
 
 ## Commands
 
 ```bash
-# Backend BDD tests (from repo root)
-docker compose -f docker-compose.yml -f docker-compose.test.yml run --build --rm backend-test
-
-# E2E tests (clean DB, production builds, port 8099)
-COMMIT_SHA=$(git rev-parse HEAD) docker compose -f docker-compose.yml -f docker-compose.test.yml up --build -d --wait -V
-npm --prefix e2e install && BASE_URL=http://localhost:8099 npm --prefix e2e test
-docker compose -f docker-compose.yml -f docker-compose.test.yml down
-
-# Dev stack (port 8090, hot reload)
-docker compose up --build -d    # --build required after Prisma schema changes
-docker compose down
-
-# Frontend type-check + build
-npm run build    # from: frontend/
-
-# Prisma migrations (from: backend/)
-npx prisma migrate dev
+npm run dev             # dev server, http://localhost:3000 (needs .env — see .env.example)
+npm run build           # production build (also the type-check)
+npm test                # full BDD suite: api + chromium + mobile-chrome (boots its own server on :8099)
+npm run test:api        # 72 API scenarios only (fast, no browser)
+npm run test:e2e        # 26 browser scenarios only
+npm run db:generate     # regenerate SQL migrations after editing db/schema.ts
 ```
+
+Tests reuse a dev server you already have on port 8099 (`TEST_PORT` overrides). `npx playwright install chromium` once per machine. Note: `next dev` and `next build` share `.next/`, so run `npm run build` again before `next start`-based smoke tests if you used the dev server since.
 
 ## Architecture
 
-### Request flow
+Single Node process: Next.js App Router serves both the React UI and the JSON API. SQLite is the whole persistence layer (one file, WAL mode, migrations auto-applied on boot by `lib/db.ts`).
 
 ```
-Browser → nginx → /api/* → backend (Fastify :3001)
-                → /*     → frontend (Vite :5173 dev, static files prod)
+Browser → Next.js → app/api/**/route.ts → lib/services/*.ts → SQLite (Drizzle)
+                  → app/**/page.tsx (client components, react-query, dnd-kit)
 ```
 
-Dev: nginx proxies both (`nginx/nginx.dev.conf`). Prod: Caddy terminates TLS and reverse-proxies to frontend container with baked-in nginx (`frontend/nginx.conf`).
+### Server
 
-### Backend (`backend/src/`)
-
-`buildApp()` in `server.ts` wires: `@fastify/cookie` → `prismaPlugin` (shared `PrismaClient`) → `registerRoutes` (all routes under `/api`).
-
-Auth: `middleware/requireAuth.ts` verifies JWT from `token` HttpOnly cookie, sets `request.user`. Admin: `middleware/requireAdmin.ts` checks `request.user.role === 'ADMIN'`.
-
-Routes map 1:1 to resources: `auth`, `taskLists`, `tasks`, `shares`, `templates`, `template-shares`, `admin`. Each delegates to a matching `services/` file.
+- `lib/db.ts` — `getDb()` singleton: better-sqlite3 (SYNCHRONOUS — `.get()/.all()/.run()`, `db.transaction(cb)` sync) + Drizzle, runs `drizzle/` migrations on open.
+- `lib/auth.ts` — JWT in `token` HttpOnly cookie; `requireAuth(request)` returns the payload or throws 401; `requireAdmin` throws 403 for non-admins. Admin role driven by `ADMIN_EMAILS` env on register/login (promote AND demote).
+- `lib/apiHandler.ts` — `handle()` wraps every route handler; thrown `HttpError` → `{error}` JSON with its status.
+- `lib/events.ts` + the `**/events/route.ts` SSE routes — in-process pub/sub for live updates (list channel = list id, template channel = `template:<id>`). Valid only while the app is one process.
+- Routes map 1:1 to resources under `app/api/`: auth, task-lists, tasks (nested), shares, templates, template-shares, admin. Each delegates to a matching `lib/services/` file.
 
 ### Database
 
-Schema: `backend/src/prisma/schema.prisma`. Migrations auto-run on startup (`prisma migrate deploy`).
+Schema: `db/schema.ts` (Drizzle, SQLite). Data model: `users` (role USER/ADMIN) → `task_lists` → `tasks` (ordered by `order`, self-ref `parent_id` for subtasks) + `task_list_shares` (READ/WRITE). `task_templates` → `template_tasks` + `template_shares` (same model). IDs are cuid2 strings.
 
-Data model: `User` (role: USER/ADMIN) → `TaskList` → `Task` (ordered by `order`) + `TaskListShare` (READ/WRITE). `TaskTemplate` → `TemplateTask` + `TemplateShare` (same model). Admin promotion driven by `ADMIN_EMAILS` env var on register/login.
+Schema change flow: edit `db/schema.ts` → `npm run db:generate` → commit the new `drizzle/*.sql` — it applies automatically on next boot everywhere (dev, tests, prod).
 
 ### Testing
 
-Two independent BDD layers:
-- **Backend** — `@cucumber/cucumber` + `tsx/cjs`. Features: `backend/features/*.feature`, steps: `backend/features/steps/`. Shared Fastify instance in `BeforeAll`, DB cleared per scenario.
-- **E2E** — `playwright-bdd`. Features: `e2e/features/`, steps: `e2e/steps/`.
+One BDD toolchain (playwright-bdd), two layers, all features in `features/`:
+- **api** — `features/api/*.feature` + `tests/steps/api/` — plain fetch against the app on :8099, DB reset per scenario (`tests/support/resetDb.ts`).
+- **e2e** — `features/e2e/*.feature` + `tests/steps/e2e/` — real browser; `@touch-only` scenarios run in the mobile-chrome (Pixel 5) project only.
 
-**Acceptance criteria** are `@ac`-tagged Gherkin scenarios in `e2e/features/` — the scenario name *is* the AC. Run `grep -A1 "@ac" e2e/features/**/*.feature` to list them.
-
-### Docker Compose files
-
-| File | Purpose |
-|---|---|
-| `docker-compose.yml` | Base: db, backend, frontend (no ports) |
-| `docker-compose.override.yml` | Dev: hot reload, nginx on :8090 |
-| `docker-compose.prod.yml` | Prod: Caddy with auto HTTPS (:80, :443) |
-| `docker-compose.test.yml` | Test: BDD runner + E2E stack on :8099 |
+**Acceptance criteria** are `@ac`-tagged scenarios in `features/e2e/` — the scenario name *is* the AC. `grep -A1 "@ac" features/e2e/*.feature` to list them. Feature files are the spec: fix code, never bend a feature file to make a test pass.
 
 ### Environment variables
 
-Required: `DATABASE_URL`, `JWT_SECRET`, `COOKIE_SECURE` (`false` dev/test, `true` prod), `DOMAIN` (prod only). Optional: `ADMIN_EMAILS` (comma-separated). See `.env.example`.
-
-### Network / firewall
-
-Host-level firewall restricts outbound access. Docker containers route through it. Ensure needed domains (e.g. `deb.debian.org`) are allowed.
+`SQLITE_PATH` (default `./data/app.db`), `JWT_SECRET` (required, 16+ chars), `COOKIE_SECURE` (`false` dev, `true` behind HTTPS), `ADMIN_EMAILS` (optional, comma-separated). See `.env.example`.
 
 ### Deployment
 
-Production: Azure VM (`Standard_B1s`). Push to `main` triggers 3-job GitHub Actions pipeline: (1) test — backend BDD + E2E in parallel, (2) build — images built in parallel via matrix, pushed to GHCR (skipped if no deploy-worthy changes), (3) deploy — SSH pull + restart. Secrets: `VM_HOST`, `VM_USER`, `VM_SSH_KEY`.
+Single process; see `deploy/README.md` (local + Tailscale, generic VM systemd + Caddy, Oracle Free ARM walkthrough, optional Dockerfile). CI (`.github/workflows/deploy.yml`): test job on every push/PR; deploy job only when repo variable `DEPLOY_ENABLED=true`, uses `DEPLOY_RUNNER` variable (`ubuntu-24.04-arm` for arm64 VMs — better-sqlite3 is a native module, build arch must match the VM) and secrets `VM_HOST`, `VM_USER`, `VM_SSH_KEY`; rsyncs the Next standalone output + `drizzle/` and restarts systemd. Backups = copy the SQLite file.
+
+### History
+
+v1 was Fastify+Prisma+Postgres+Docker (multi-container). `scripts/migrate-from-postgres.ts` migrates v1 data into SQLite. The Gherkin features carried over verbatim from v1 — scenario names are stable identifiers; don't rename them casually.

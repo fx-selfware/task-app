@@ -1,0 +1,47 @@
+{
+  "name": "task-app",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "bddgen && playwright test",
+    "test:api": "bddgen && playwright test --project=api",
+    "test:e2e": "bddgen && playwright test --project=chromium --project=mobile-chrome",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^8.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@paralleldrive/cuid2": "^2.2.2",
+    "@tanstack/react-query": "^5.62.2",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.2.0",
+    "drizzle-orm": "^0.44.2",
+    "jsonwebtoken": "^9.0.2",
+    "next": "^15.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "drizzle-kit": "^0.31.1",
+    "pg": "^8.22.0",
+    "playwright-bdd": "^9.2.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
+    "tsx": "^4.23.0",
+    "typescript": "^5.6.3"
+  }
+}

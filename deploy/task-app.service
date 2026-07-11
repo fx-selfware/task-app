@@ -1,0 +1,36 @@
+# systemd unit for task-app (Next.js standalone build).
+# Install: sudo cp deploy/task-app.service /etc/systemd/system/ && sudo systemctl enable --now task-app
+# The app directory layout expected at /opt/task-app:
+#   server.js + node_modules/ + .next/   (contents of .next/standalone, plus .next/static copied into .next/)
+#   drizzle/                             (SQL migrations, applied automatically on boot)
+#   /var/lib/task-app/app.db             (SQLite database, via SQLITE_PATH below)
+[Unit]
+Description=Task App (Next.js + SQLite)
+After=network.target
+
+[Service]
+Type=simple
+User=taskapp
+Group=taskapp
+WorkingDirectory=/opt/task-app
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=SQLITE_PATH=/var/lib/task-app/app.db
+# Set real values in the override file: sudo systemctl edit task-app
+#   [Service]
+#   Environment=JWT_SECRET=<random 32+ chars>
+#   Environment=COOKIE_SECURE=true
+#   Environment=ADMIN_EMAILS=you@example.com
+ExecStart=/usr/bin/env node server.js
+Restart=on-failure
+RestartSec=3
+
+# Hardening (optional but free)
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/task-app
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
