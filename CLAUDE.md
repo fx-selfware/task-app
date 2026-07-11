@@ -15,13 +15,15 @@
 npm run dev             # dev server, http://localhost:3000 (needs .env — see .env.example)
 npm run build           # production build (also the type-check)
 npm test                # full BDD suite: api + chromium + mobile-chrome (boots its own server on :8099)
-npm run test:api        # 72 API scenarios only (fast, no browser)
+npm run test:api        # 73 API scenarios only (fast, no browser)
 npm run test:e2e        # 26 browser scenarios only
 npm run db:generate     # regenerate SQL migrations after editing db/schema.ts
 npm run db:migrate      # apply migrations explicitly (Vercel runs this in vercel-build)
 ```
 
 Tests reuse a dev server you already have on port 8099 (`TEST_PORT` overrides). `npx playwright install chromium` once per machine. Note: `next dev` and `next build` share `.next/`, so run `npm run build` again before `next start`-based smoke tests if you used the dev server since.
+
+`package.json` has npm `overrides` pinning `next`'s nested `postcss` to `^8.5.10` (GHSA-qx2v-qp2m-jg93; every stable `next` through 16.2.10 still bundles 8.4.31) and `@esbuild-kit/core-utils`'s nested `esbuild` to `^0.25.0` (GHSA-67mh-4wv8-2f99, pulled in by `drizzle-kit`'s esm-loader). Remove the `next` override once a stable `next` ships with postcss >=8.5.10 (16.3.0+); remove the `esbuild-kit` override once `drizzle-kit` 1.0.0 stable (which drops `@esbuild-kit`) is released. If `npm install` doesn't apply an `overrides` change to an existing lockfile, delete `node_modules`/`package-lock.json` and reinstall clean.
 
 ## Architecture
 
