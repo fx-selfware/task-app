@@ -4,6 +4,12 @@ Shared task lists for family and friends: lists, subtasks, drag-and-drop orderin
 
 **Stack**: Next.js (App Router) · React + Tailwind · SQLite dialect via [libsql](https://github.com/tursodatabase/libsql) (Drizzle ORM) · playwright-bdd for tests. Deploys to **Vercel + Turso** for free.
 
+<p align="center">
+  <img src="screenshots/templating.png" width="280" alt="A Weekly Chores template with tasks and a subtask">
+  &nbsp;&nbsp;
+  <img src="screenshots/sharing.png" width="280" alt="Sharing a task list with READ/WRITE permissions">
+</p>
+
 ---
 
 ## Quick start
@@ -31,7 +37,30 @@ The test runner boots `next dev` on port 8099 automatically (or reuses one you'v
 
 ## Deployment
 
-**Vercel + Turso:** import the repo at [vercel.com/new](https://vercel.com/new), add the Turso integration from the Vercel Marketplace (provisions the database and injects `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`), set `JWT_SECRET`, deploy. Pushes to `main` auto-deploy; PRs get preview URLs. Migrations run during the build (`vercel-build`). Details: **[deploy/README.md](deploy/README.md)**.
+Deploys to **Vercel + Turso** — both free tiers cover a family-and-friends workload with enormous headroom, and there are no servers to maintain.
+
+Environment keys (see `.env.example`): `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (remote DBs only), `JWT_SECRET`, `ADMIN_EMAILS` (optional), `COOKIE_SECURE` (local dev only — Vercel defaults to secure).
+
+1. Fork or clone this repo to your GitHub account, then import it at [vercel.com/new](https://vercel.com/new). The build is preconfigured: Vercel runs `vercel-build` (applies pending Drizzle migrations to your database, then `next build`).
+2. In the Vercel project, add the **Turso integration** from the Marketplace storage tab — it provisions a database and injects `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` automatically. (Alternatively, create a DB with the [Turso CLI](https://docs.turso.tech/cli) and set those two env vars by hand.)
+3. Add env vars: `JWT_SECRET` (`openssl rand -hex 32`) and optionally `ADMIN_EMAILS`.
+4. Deploy. Every later push to `main` deploys automatically; every PR gets a preview URL running against the same database — use a second Turso DB (or a [branched database](https://docs.turso.tech/features/branching)) for previews if you want isolation.
+
+### Importing existing data
+
+Turso can create a database directly from a SQLite file:
+
+```bash
+turso db create taskapp --from-file path/to/app.db
+turso db show taskapp --url          # -> TURSO_DATABASE_URL
+turso db tokens create taskapp      # -> TURSO_AUTH_TOKEN
+```
+
+If the file was written in WAL mode, produce a clean single-file copy first: `sqlite3 app.db "VACUUM INTO 'clean.db'"`.
+
+### Backups
+
+`turso db shell taskapp .dump > backup.sql`, or export back to a local file with `turso db export`. Cron it if you're paranoid — the whole database is tiny.
 
 ## Customizing
 

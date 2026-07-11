@@ -1,11 +1,8 @@
 # CLAUDE.md
 
-## CRITICAL — Read First
+## Workflow
 
-**NEVER create git commits or amend existing commits unless the user explicitly says "commit".** Completing an edit, fixing a bug, or passing tests does NOT mean you should commit. Wait for the user to ask.
-
-## Workflow Rules
-
+- **Isolate work in a git worktree on its own branch**, never commit directly on `main`. Commit as you go, push the branch, and open a PR — don't push straight to `main` or merge without review.
 - **Always run `npm run test:api`** after any change to `app/api/`, `lib/`, or `db/`. Do not consider work complete until it passes.
 - **Always run `npm run test:e2e`** after any change to `app/` pages, `components/`, or `hooks/`. Do not consider work complete until it passes.
 - **Mobile matters** — iOS Safari/Chrome and Android Chrome equally. Use `text-base sm:text-sm` on inputs to prevent auto-zoom, test touch interactions, respect mobile viewports.
@@ -69,8 +66,4 @@ Cleanup: `tests/support/globalTeardown.ts` deletes every account the suite creat
 
 ### Deployment
 
-Production is Vercel (git integration deploys `main`; PRs get preview URLs) + Turso via the Vercel Marketplace integration. See `deploy/README.md`. Backups: `turso db shell <db> .dump`.
-
-### History
-
-v1 was Fastify+Prisma+Postgres+Docker (multi-container). The Gherkin features carried over verbatim from v1 — scenario names are stable identifiers; don't rename them casually.
+Production is Vercel (git integration deploys `main`; PRs get preview URLs) + Turso via the Vercel Marketplace integration. See the Deployment section in README.md. Backups: `turso db shell <db> .dump`.
