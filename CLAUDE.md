@@ -27,7 +27,7 @@ Tests reuse a dev server you already have on port 8099 (`TEST_PORT` overrides). 
 
 ## Architecture
 
-Next.js App Router serves both the React UI and the JSON API. Persistence is the SQLite dialect via `@libsql/client`: a local file (`file:` URL) in dev/tests/self-host, a remote Turso database (`libsql://` URL) in production on Vercel. Same code, different URL. Production runs serverless — NO in-process state may be relied on (no module-scope caches, no pub/sub; that's why live updates are polling, not SSE).
+Next.js App Router serves both the React UI and the JSON API. Persistence is the SQLite dialect via `@libsql/client`: a local file (`file:` URL) in dev/tests, a remote Turso database (`libsql://` URL) in production on Vercel. Same code, different URL. Production runs serverless — NO in-process state may be relied on (no module-scope caches, no pub/sub; that's why live updates are polling, not SSE).
 
 ```
 Browser → Next.js → app/api/**/route.ts → lib/services/*.ts → libsql (Drizzle)
@@ -51,7 +51,7 @@ The app is installable. `app/manifest.ts` is the web manifest; icons (`app/icon.
 
 Schema: `db/schema.ts` (Drizzle, SQLite). Data model: `users` (role USER/ADMIN) → `task_lists` → `tasks` (ordered by `order`, self-ref `parent_id` for subtasks) + `task_list_shares` (READ/WRITE). `task_templates` → `template_tasks` + `template_shares` (same model). IDs are cuid2 strings.
 
-Schema change flow: edit `db/schema.ts` → `npm run db:generate` → commit the new `drizzle/*.sql`. It applies automatically on next boot for `file:` databases (dev, tests, self-host) and at build time on Vercel (`vercel-build` runs `drizzle-kit migrate` against Turso).
+Schema change flow: edit `db/schema.ts` → `npm run db:generate` → commit the new `drizzle/*.sql`. It applies automatically on next boot for `file:` databases (dev, tests) and at build time on Vercel (`vercel-build` runs `drizzle-kit migrate` against Turso).
 
 ### Testing
 
@@ -69,8 +69,8 @@ Cleanup: `tests/support/globalTeardown.ts` deletes every account the suite creat
 
 ### Deployment
 
-Production is Vercel (git integration deploys `main`; PRs get preview URLs) + Turso via the Vercel Marketplace integration. CI (`.github/workflows/deploy.yml`) runs tests only. Self-host and Docker paths in `deploy/README.md` use the same code with a `file:` URL. Backups: `turso db shell <db> .dump` (prod) or copy the SQLite file (self-host).
+Production is Vercel (git integration deploys `main`; PRs get preview URLs) + Turso via the Vercel Marketplace integration. See `deploy/README.md`. Backups: `turso db shell <db> .dump`.
 
 ### History
 
-v1 was Fastify+Prisma+Postgres+Docker (multi-container). `scripts/migrate-from-postgres.ts` migrates v1 data into SQLite. The Gherkin features carried over verbatim from v1 — scenario names are stable identifiers; don't rename them casually.
+v1 was Fastify+Prisma+Postgres+Docker (multi-container). The Gherkin features carried over verbatim from v1 — scenario names are stable identifiers; don't rename them casually.
