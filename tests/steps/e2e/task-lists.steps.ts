@@ -139,7 +139,8 @@ When(
     await collabPage.getByText(listName, { exact: true }).first().click();
     await collabPage.waitForURL(/\/task-lists\/[a-z0-9]+/);
     await expect(collabPage.locator('h1')).toContainText(listName, { timeout: 5000 });
-    // Allow time for the EventSource SSE connection to establish
+    // Allow the collaborator page's initial load/hydration to settle before
+    // the poll-based live-update assertions that follow
     await collabPage.waitForTimeout(1000);
   },
 );
