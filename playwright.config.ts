@@ -42,6 +42,7 @@ const e2eTestDir = hasE2eFeatures
 
 export default defineConfig({
   globalSetup: './tests/support/globalSetup.ts',
+  globalTeardown: './tests/support/globalTeardown.ts',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

@@ -185,13 +185,16 @@ When('I select {string} in the move modal', async ({ page }, parentName: string)
 });
 
 Then('{string} is a top-level task after {string}', async ({ page }, name: string, afterName: string) => {
-  // Wait for the promoted task to appear as a top-level task
-  await page.waitForTimeout(500);
-  const cards = page.locator('.space-y-2').first().locator('> div');
-  const allTexts = await cards.allTextContents();
-  const beforeIdx = allTexts.findIndex((t) => t.includes(afterName));
-  const afterIdx = allTexts.findIndex((t) => t.includes(name));
-  expect(afterIdx).toBeGreaterThan(beforeIdx);
+  // Poll until the promoted task appears as a top-level task — a fixed sleep
+  // is not enough when the refetch crosses a real network (remote DB).
+  await expect(async () => {
+    const cards = page.locator('.space-y-2').first().locator('> div');
+    const allTexts = await cards.allTextContents();
+    const beforeIdx = allTexts.findIndex((t) => t.includes(afterName));
+    const afterIdx = allTexts.findIndex((t) => t.includes(name));
+    expect(beforeIdx).toBeGreaterThanOrEqual(0);
+    expect(afterIdx).toBeGreaterThan(beforeIdx);
+  }).toPass({ timeout: 10_000 });
 });
 
 Then('{string} is visible as a subtask of {string}', async ({ page }, subName: string, parentName: string) => {

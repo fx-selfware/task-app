@@ -57,6 +57,8 @@ One BDD toolchain (playwright-bdd), two layers, all features in `features/`:
 
 **Acceptance criteria** are `@ac`-tagged scenarios in `features/e2e/` — the scenario name *is* the AC. `grep -A1 "@ac" features/e2e/*.feature` to list them. Feature files are the spec: fix code, never bend a feature file to make a test pass.
 
+Cleanup: `tests/support/globalTeardown.ts` deletes every account the suite creates. To smoke-test a deployed instance, set `BASE_URL=https://…` AND export that instance's `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` so teardown can reach its database. Step assertions must poll (`expect(...).toPass()`), never fixed-sleep — remote-DB latency breaks sleeps.
+
 ### Environment variables
 
 `TURSO_DATABASE_URL` (default `file:./data/app.db`; `libsql://…` in prod), `TURSO_AUTH_TOKEN` (remote DBs only), `JWT_SECRET` (required, 16+ chars), `COOKIE_SECURE` (defaults to secure when `VERCEL_ENV` is set; `false` for local http), `ADMIN_EMAILS` (optional, comma-separated). See `.env.example`.
