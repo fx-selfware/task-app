@@ -62,6 +62,14 @@ Environment keys (see `.env.example`): `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` 
 3. Add env vars: `JWT_SECRET` (`openssl rand -hex 32`) and optionally `ADMIN_EMAILS`.
 4. Deploy. Every later push to `main` deploys automatically; every PR gets a preview URL running against the same database — use a second Turso DB (or a [branched database](https://docs.turso.tech/features/branching)) for previews if you want isolation.
 
+**Set the function region to match your database.** Vercel defaults to `iad1` (Washington DC); if your Turso primary is elsewhere, every database round trip pays the distance — measured at ~66ms on this project before it was fixed, which dwarfs any query tuning. `turso db show <db>` prints the primary's location, [Vercel's region list](https://vercel.com/docs/regions) maps AWS regions to Vercel codes, and `vercel.json` sets it:
+
+```json
+{ "regions": ["pdx1"] }
+```
+
+A single region works on every plan. This repo's `vercel.json` targets `pdx1` (us-west-2) to match a Turso primary in `aws-us-west-2` — change it if yours lives somewhere else.
+
 ### Importing existing data
 
 Turso can create a database directly from a SQLite file:
