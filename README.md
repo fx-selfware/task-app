@@ -37,6 +37,18 @@ npm run test:e2e      # 26 browser scenarios, incl. mobile touch
 
 The test runner boots `next dev` on port 8099 automatically (or reuses one you've started). First run needs `npx playwright install chromium`.
 
+### Latency benchmark
+
+A separate stopwatch suite measures how the app feels over a slow connection — it delays every API request client-side and charges each database statement a simulated Turso round trip, then reports how long each interaction takes to *look* done versus to actually finish.
+
+```bash
+PERF_LABEL=before npm run test:perf     # baseline
+PERF_LABEL=after  npm run test:perf     # after your change
+npm run perf:compare before after
+```
+
+It builds and runs a production server on its own port (8098), so it never reuses a dev server. See [`tests/perf/README.md`](tests/perf/README.md).
+
 ## Deployment
 
 Deploys to **Vercel + Turso** — both free tiers cover a family-and-friends workload with enormous headroom, and there are no servers to maintain.

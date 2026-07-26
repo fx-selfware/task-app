@@ -9,6 +9,8 @@
     "test": "bddgen && playwright test",
     "test:api": "bddgen && playwright test --project=api",
     "test:e2e": "bddgen && playwright test --project=chromium --project=mobile-chrome",
+    "test:perf": "next build && playwright test --config=playwright.perf.config.ts",
+    "perf:compare": "tsx tests/perf/compare.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "vercel-build": "drizzle-kit migrate && next build"

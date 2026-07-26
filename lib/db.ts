@@ -4,6 +4,7 @@ import { createClient } from '@libsql/client';
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
 import { migrate } from 'drizzle-orm/libsql/migrator';
 import * as schema from '@/db/schema';
+import { withSimulatedLatency } from '@/lib/dbLatency';
 
 export type Db = LibSQLDatabase<typeof schema>;
 
@@ -19,7 +20,10 @@ async function init(): Promise<Db> {
     fs.mkdirSync(path.dirname(path.resolve(url.slice('file:'.length))), { recursive: true });
   }
 
-  const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+  const rawClient = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+  // Perf benchmark only (tests/perf) — unset everywhere else, including prod.
+  const latencyMs = Number(process.env.PERF_DB_LATENCY_MS ?? 0);
+  const client = latencyMs > 0 ? withSimulatedLatency(rawClient, latencyMs) : rawClient;
   const db = drizzle(client, { schema });
 
   if (url.startsWith('file:')) {

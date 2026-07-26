@@ -17,6 +17,8 @@ npm run build           # production build (also the type-check)
 npm test                # full BDD suite: api + chromium + mobile-chrome (boots its own server on :8099)
 npm run test:api        # 73 API scenarios only (fast, no browser)
 npm run test:e2e        # 26 browser scenarios only
+npm run test:perf       # latency benchmark (builds, own server on :8098) — not part of `npm test`
+npm run perf:compare before after   # diff two benchmark reports
 npm run db:generate     # regenerate SQL migrations after editing db/schema.ts
 npm run db:migrate      # apply migrations explicitly (Vercel runs this in vercel-build)
 ```
@@ -60,6 +62,8 @@ One BDD toolchain (playwright-bdd), two layers, all features in `features/`:
 - **e2e** — `features/e2e/*.feature` + `tests/steps/e2e/` — real browser; `@touch-only` scenarios run in the mobile-chrome (Pixel 5) project only.
 
 **Acceptance criteria** are `@ac`-tagged scenarios in `features/e2e/` — the scenario name *is* the AC. `grep -A1 "@ac" features/e2e/*.feature` to list them. Feature files are the spec: fix code, never bend a feature file to make a test pass.
+
+**Performance** is measured separately by `tests/perf/` (plain Playwright, not BDD, own config and port). It delays every API request client-side (`PERF_NET_MS`) and charges each DB statement a simulated Turso round trip (`PERF_DB_MS`, injected by `lib/dbLatency.ts` and inert unless `PERF_DB_LATENCY_MS` is set), then reports per interaction: **perceived** (click → UI updated), **settled** (click → last request done), and API calls. Optimistic UI moves perceived; batching round trips and dropping redundant refetches move settled. Label runs and diff them — see `tests/perf/README.md`. Always invoke via `npm run test:perf`; it rebuilds first, and running `playwright test` directly measures a stale build.
 
 Cleanup: `tests/support/globalTeardown.ts` deletes every account the suite creates. To smoke-test a deployed instance, set `BASE_URL=https://…` AND export that instance's `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` so teardown can reach its database. Step assertions must poll (`expect(...).toPass()`), never fixed-sleep — remote-DB latency breaks sleeps.
 
