@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import { createId } from '@paralleldrive/cuid2';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -30,9 +30,8 @@ import {
   useDeleteCompletedTasks,
 } from '@/hooks/useTasks';
 import { Button } from '@/components/Button';
-import { Input } from '@/components/Input';
-import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { NameFormModal, TaskFormModal } from '@/components/TaskFormModal';
 import { Spinner } from '@/components/Spinner';
 import { SharesModal } from '@/components/SharesModal';
 import { FloatingAddButton } from '@/components/FloatingAddButton';
@@ -60,17 +59,12 @@ export default function TaskListDetailPage() {
   useTaskListEvents(id!);
 
   const [showRename, setShowRename] = useState(false);
-  const [renameName, setRenameName] = useState('');
   const [showAddTask, setShowAddTask] = useState(false);
   const [addSubtaskParentId, setAddSubtaskParentId] = useState<string | null>(null);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDesc, setNewTaskDesc] = useState('');
   const [showShares, setShowShares] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
   const [showDeleteList, setShowDeleteList] = useState(false);
   const [editTarget, setEditTarget] = useState<Task | null>(null);
-  const [editTaskTitle, setEditTaskTitle] = useState('');
-  const [editTaskDesc, setEditTaskDesc] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
   const [showDeleteCompleted, setShowDeleteCompleted] = useState(false);
   const [collapsedParents, toggleCollapse] = useToggleSet();
@@ -85,14 +79,18 @@ export default function TaskListDetailPage() {
   const [enteringIds, setEnteringIds] = useState<Set<string>>(new Set());
   const prevTodoIdsRef = useRef<Set<string>>(new Set());
 
-  const tasks = data?.list?.tasks ?? [];
+  const tasks = useMemo(() => data?.list?.tasks ?? [], [data]);
 
   // Count all done tasks (top-level + all done subtasks)
-  const allDoneCount = tasks.reduce((sum, t) => {
-    let count = t.status === 'DONE' ? 1 : 0;
-    count += t.subtasks?.filter((s) => s.status === 'DONE').length ?? 0;
-    return sum + count;
-  }, 0);
+  const allDoneCount = useMemo(
+    () =>
+      tasks.reduce((sum, t) => {
+        let count = t.status === 'DONE' ? 1 : 0;
+        count += t.subtasks?.filter((s) => s.status === 'DONE').length ?? 0;
+        return sum + count;
+      }, 0),
+    [tasks],
+  );
 
   useEffect(() => {
     if (allDoneCount === 0 && uncompletingIds.size === 0) setShowCompleted(false);
@@ -106,32 +104,28 @@ export default function TaskListDetailPage() {
     if (el) setDragYOffset(preCollapseTopRef.current - el.getBoundingClientRect().top);
   }, [activeDragId]);
 
-  const todoTasks = tasks.filter(
-    (t) => (t.status === 'TODO' && !uncompletingIds.has(t.id)) || completingIds.has(t.id),
+  const todoTasks = useMemo(
+    () => tasks.filter((t) => (t.status === 'TODO' && !uncompletingIds.has(t.id)) || completingIds.has(t.id)),
+    [tasks, uncompletingIds, completingIds],
   );
 
   // Build groups for the completed section
-  const completedGroups: { parent: Task; parentMode: 'completed' | 'readonly-header'; completedSubtasks: Task[] }[] = [];
-  for (const task of tasks) {
-    if ((task.status === 'DONE' || uncompletingIds.has(task.id)) && !completingIds.has(task.id)) {
-      completedGroups.push({
-        parent: task,
-        parentMode: 'completed',
-        completedSubtasks: task.subtasks ?? [],
-      });
-    } else if (task.status === 'TODO') {
-      const doneSubs = (task.subtasks ?? []).filter(
-        (s) => (s.status === 'DONE' || uncompletingIds.has(s.id)) && !completingIds.has(s.id)
-      );
-      if (doneSubs.length > 0) {
-        completedGroups.push({
-          parent: task,
-          parentMode: 'readonly-header',
-          completedSubtasks: doneSubs,
-        });
+  const completedGroups = useMemo(() => {
+    const groups: { parent: Task; parentMode: 'completed' | 'readonly-header'; completedSubtasks: Task[] }[] = [];
+    for (const task of tasks) {
+      if ((task.status === 'DONE' || uncompletingIds.has(task.id)) && !completingIds.has(task.id)) {
+        groups.push({ parent: task, parentMode: 'completed', completedSubtasks: task.subtasks ?? [] });
+      } else if (task.status === 'TODO') {
+        const doneSubs = (task.subtasks ?? []).filter(
+          (s) => (s.status === 'DONE' || uncompletingIds.has(s.id)) && !completingIds.has(s.id),
+        );
+        if (doneSubs.length > 0) {
+          groups.push({ parent: task, parentMode: 'readonly-header', completedSubtasks: doneSubs });
+        }
       }
     }
-  }
+    return groups;
+  }, [tasks, uncompletingIds, completingIds]);
 
   // Detect newly appearing tasks for enter animation
   const todoIdKey = todoTasks.map((t) => t.id).join(',');
@@ -243,35 +237,31 @@ export default function TaskListDetailPage() {
 
   const openAddTask = () => {
     setAddSubtaskParentId(null);
-    setNewTaskTitle('');
-    setNewTaskDesc('');
     setShowAddTask(true);
   };
 
   const openAddSubtask = (parentId: string) => {
     setAddSubtaskParentId(parentId);
-    setNewTaskTitle('');
-    setNewTaskDesc('');
     setShowAddTask(true);
   };
 
-  const handleAddTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    createTask.mutate({
-      id: createId(),
-      title: newTaskTitle,
-      description: newTaskDesc,
-      ...(addSubtaskParentId && { parentId: addSubtaskParentId }),
-    });
-    setNewTaskTitle('');
-    setNewTaskDesc('');
+  const closeAddTask = () => {
     setShowAddTask(false);
     setAddSubtaskParentId(null);
   };
 
-  const handleRename = (e: React.FormEvent) => {
-    e.preventDefault();
-    renameList.mutate({ id: id!, name: renameName });
+  const handleAddTask = ({ title, description }: { title: string; description: string }) => {
+    createTask.mutate({
+      id: createId(),
+      title,
+      description,
+      ...(addSubtaskParentId && { parentId: addSubtaskParentId }),
+    });
+    closeAddTask();
+  };
+
+  const handleRename = (name: string) => {
+    renameList.mutate({ id: id!, name });
     setShowRename(false);
   };
 
@@ -280,21 +270,14 @@ export default function TaskListDetailPage() {
     router.push('/task-lists');
   };
 
-  const openEdit = (task: Task) => {
-    setEditTaskTitle(task.title);
-    setEditTaskDesc(task.description ?? '');
-    setEditTarget(task);
-  };
+  const openEdit = (task: Task) => setEditTarget(task);
+  const closeEdit = () => setEditTarget(null);
 
-  const handleEditTask = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEditTask = ({ title, description }: { title: string; description: string }) => {
     if (!editTarget) return;
     updateTask.mutate({
       taskId: editTarget.id,
-      data: {
-        title: editTaskTitle,
-        description: editTaskDesc.trim() || null,
-      },
+      data: { title, description: description.trim() || null },
     });
     setEditTarget(null);
   };
@@ -314,7 +297,7 @@ export default function TaskListDetailPage() {
             items={[
               ...(isOwner ? [
                 { label: 'Share', onClick: () => setShowShares(true) },
-                { label: 'Rename', onClick: () => { setRenameName(list.name); setShowRename(true); } },
+                { label: 'Rename', onClick: () => setShowRename(true) },
               ] : []),
               ...(canWrite && allDoneCount > 0 ? [
                 { label: 'Delete completed', onClick: () => setShowDeleteCompleted(true), variant: 'danger' as const },
@@ -511,112 +494,36 @@ export default function TaskListDetailPage() {
         </>
       )}
 
-      {/* Add Task / Add Subtask Modal */}
-      <Modal
+      <TaskFormModal
         open={showAddTask}
-        onClose={() => { setShowAddTask(false); setAddSubtaskParentId(null); }}
-        title={addSubtaskParentId ? 'Add Subtask' : 'Add Task'}
-      >
-        <form onSubmit={handleAddTask} className="space-y-4">
-          <Input
-            label="Title"
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                (e.target as HTMLInputElement).form?.requestSubmit();
-              }
-            }}
-            enterKeyHint="done"
-            required
-            autoFocus
-          />
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Description (optional)
-            </label>
-            <textarea
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-              value={newTaskDesc}
-              onChange={(e) => setNewTaskDesc(e.target.value)}
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => { setShowAddTask(false); setAddSubtaskParentId(null); }}
-              type="button"
-            >
-              Cancel
-            </Button>
-            <Button type="submit" loading={createTask.isPending}>
-              Add
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        heading={addSubtaskParentId ? 'Add Subtask' : 'Add Task'}
+        submitLabel="Add"
+        loading={createTask.isPending}
+        onClose={closeAddTask}
+        onSubmit={handleAddTask}
+      />
 
-      {/* Edit Task Modal */}
-      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title="Edit Task">
-        <form onSubmit={handleEditTask} className="space-y-4">
-          <Input
-            label="Title"
-            value={editTaskTitle}
-            onChange={(e) => setEditTaskTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                (e.target as HTMLInputElement).form?.requestSubmit();
-              }
-            }}
-            enterKeyHint="done"
-            required
-            autoFocus
-          />
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Description (optional)
-            </label>
-            <textarea
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-              value={editTaskDesc}
-              onChange={(e) => setEditTaskDesc(e.target.value)}
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditTarget(null)} type="button">
-              Cancel
-            </Button>
-            <Button type="submit" loading={updateTask.isPending}>
-              Save
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <TaskFormModal
+        open={!!editTarget}
+        heading="Edit Task"
+        submitLabel="Save"
+        initialTitle={editTarget?.title}
+        initialDescription={editTarget?.description ?? ''}
+        loading={updateTask.isPending}
+        onClose={closeEdit}
+        onSubmit={handleEditTask}
+      />
 
-      {/* Rename Modal */}
-      <Modal open={showRename} onClose={() => setShowRename(false)} title="Rename List">
-        <form onSubmit={handleRename} className="space-y-4">
-          <Input
-            label="Name"
-            value={renameName}
-            onChange={(e) => setRenameName(e.target.value)}
-            required
-            autoFocus
-          />
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setShowRename(false)} type="button">
-              Cancel
-            </Button>
-            <Button type="submit" loading={renameList.isPending}>
-              Rename
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <NameFormModal
+        open={showRename}
+        heading="Rename List"
+        label="Name"
+        submitLabel="Rename"
+        initialName={list.name}
+        loading={renameList.isPending}
+        onClose={() => setShowRename(false)}
+        onSubmit={handleRename}
+      />
 
       {/* Delete task confirm */}
       <ConfirmDialog

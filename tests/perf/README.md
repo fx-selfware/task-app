@@ -22,7 +22,7 @@ Two independent delays, because the app pays two independent costs:
 | Knob | Default | Models |
 | --- | --- | --- |
 | `PERF_NET_MS` | 120 | Client→server round trip, added to every `/api/*` request by the test |
-| `PERF_DB_MS` | 40 | Server→Turso round trip, charged per statement by `lib/dbLatency.ts` |
+| `PERF_DB_MS` | 40 | Server→Turso round trip, charged per statement by `lib/dbInstrument.ts` |
 
 An API call therefore costs `PERF_NET_MS + (statements × PERF_DB_MS)`. That
 second term is the point: it means a route that batches three statements into

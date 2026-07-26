@@ -33,9 +33,9 @@ import {
 import { useTemplateEvents } from '@/hooks/useTemplateEvents';
 import { useTaskLists } from '@/hooks/useTaskLists';
 import { Button } from '@/components/Button';
-import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { NameFormModal, TaskFormModal } from '@/components/TaskFormModal';
 import { Spinner } from '@/components/Spinner';
 import { TemplateSharesModal } from '@/components/TemplateSharesModal';
 import { FloatingAddButton } from '@/components/FloatingAddButton';
@@ -67,14 +67,9 @@ export default function TemplateDetailPage() {
   useTemplateEvents(id!);
 
   const [showRename, setShowRename] = useState(false);
-  const [renameName, setRenameName] = useState('');
   const [showAddTask, setShowAddTask] = useState(false);
   const [addSubtaskParentId, setAddSubtaskParentId] = useState<string | null>(null);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDesc, setNewTaskDesc] = useState('');
   const [editingTask, setEditingTask] = useState<TemplateTask | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDesc, setEditDesc] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<TemplateTask | null>(null);
   const [showApply, setShowApply] = useState(false);
   const [applyListId, setApplyListId] = useState('');
@@ -125,52 +120,43 @@ export default function TemplateDetailPage() {
     reorderTasks.mutate({ orderedIds: newIds });
   };
 
-  const handleRename = (e: React.FormEvent) => {
-    e.preventDefault();
-    renameTemplate.mutate({ id: id!, name: renameName });
+  const handleRename = (name: string) => {
+    renameTemplate.mutate({ id: id!, name });
     setShowRename(false);
   };
 
   const openAddTask = () => {
     setAddSubtaskParentId(null);
-    setNewTaskTitle('');
-    setNewTaskDesc('');
     setShowAddTask(true);
   };
 
   const openAddSubtask = (parentId: string) => {
     setAddSubtaskParentId(parentId);
-    setNewTaskTitle('');
-    setNewTaskDesc('');
     setShowAddTask(true);
   };
 
-  const handleAddTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    createTask.mutate({
-      id: createId(),
-      title: newTaskTitle,
-      description: newTaskDesc,
-      ...(addSubtaskParentId && { parentId: addSubtaskParentId }),
-    });
-    setNewTaskTitle('');
-    setNewTaskDesc('');
+  const closeAddTask = () => {
     setShowAddTask(false);
     setAddSubtaskParentId(null);
   };
 
-  const openEdit = (task: TemplateTask) => {
-    setEditTitle(task.title);
-    setEditDesc(task.description ?? '');
-    setEditingTask(task);
+  const handleAddTask = ({ title, description }: { title: string; description: string }) => {
+    createTask.mutate({
+      id: createId(),
+      title,
+      description,
+      ...(addSubtaskParentId && { parentId: addSubtaskParentId }),
+    });
+    closeAddTask();
   };
 
-  const handleEditTask = (e: React.FormEvent) => {
-    e.preventDefault();
+  const openEdit = (task: TemplateTask) => setEditingTask(task);
+
+  const handleEditTask = ({ title, description }: { title: string; description: string }) => {
     if (!editingTask) return;
     updateTask.mutate({
       taskId: editingTask.id,
-      data: { title: editTitle, description: editDesc.trim() },
+      data: { title, description: description.trim() },
     });
     setEditingTask(null);
   };
@@ -206,7 +192,7 @@ export default function TemplateDetailPage() {
               { label: 'Apply', onClick: () => setShowApply(true) },
               ...(isOwner ? [{ label: 'Share', onClick: () => setShowShares(true) }] : []),
               ...(canWrite ? [
-                { label: 'Rename', onClick: () => { setRenameName(template.name); setShowRename(true); } },
+                { label: 'Rename', onClick: () => setShowRename(true) },
               ] : []),
             ]}
           />
@@ -308,112 +294,36 @@ export default function TemplateDetailPage() {
         </DndContext>
       )}
 
-      {/* Rename */}
-      <Modal open={showRename} onClose={() => setShowRename(false)} title="Rename Template">
-        <form onSubmit={handleRename} className="space-y-4">
-          <Input
-            label="Name"
-            value={renameName}
-            onChange={(e) => setRenameName(e.target.value)}
-            required
-            autoFocus
-          />
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setShowRename(false)} type="button">
-              Cancel
-            </Button>
-            <Button type="submit" loading={renameTemplate.isPending}>
-              Rename
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <NameFormModal
+        open={showRename}
+        heading="Rename Template"
+        label="Name"
+        submitLabel="Rename"
+        initialName={template.name}
+        loading={renameTemplate.isPending}
+        onClose={() => setShowRename(false)}
+        onSubmit={handleRename}
+      />
 
-      {/* Add task / subtask */}
-      <Modal
+      <TaskFormModal
         open={showAddTask}
-        onClose={() => { setShowAddTask(false); setAddSubtaskParentId(null); }}
-        title={addSubtaskParentId ? 'Add Subtask' : 'Add Template Task'}
-      >
-        <form onSubmit={handleAddTask} className="space-y-4">
-          <Input
-            label="Title"
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                (e.target as HTMLInputElement).form?.requestSubmit();
-              }
-            }}
-            enterKeyHint="done"
-            required
-            autoFocus
-          />
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Description (optional)
-            </label>
-            <textarea
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-              value={newTaskDesc}
-              onChange={(e) => setNewTaskDesc(e.target.value)}
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => { setShowAddTask(false); setAddSubtaskParentId(null); }}
-              type="button"
-            >
-              Cancel
-            </Button>
-            <Button type="submit" loading={createTask.isPending}>
-              Add
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        heading={addSubtaskParentId ? 'Add Subtask' : 'Add Template Task'}
+        submitLabel="Add"
+        loading={createTask.isPending}
+        onClose={closeAddTask}
+        onSubmit={handleAddTask}
+      />
 
-      {/* Edit task */}
-      <Modal open={!!editingTask} onClose={() => setEditingTask(null)} title="Edit Task">
-        <form onSubmit={handleEditTask} className="space-y-4">
-          <Input
-            label="Title"
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                (e.target as HTMLInputElement).form?.requestSubmit();
-              }
-            }}
-            enterKeyHint="done"
-            required
-            autoFocus
-          />
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Description (optional)
-            </label>
-            <textarea
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-              value={editDesc}
-              onChange={(e) => setEditDesc(e.target.value)}
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditingTask(null)} type="button">
-              Cancel
-            </Button>
-            <Button type="submit" loading={updateTask.isPending}>
-              Save
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <TaskFormModal
+        open={!!editingTask}
+        heading="Edit Task"
+        submitLabel="Save"
+        initialTitle={editingTask?.title}
+        initialDescription={editingTask?.description ?? ''}
+        loading={updateTask.isPending}
+        onClose={() => setEditingTask(null)}
+        onSubmit={handleEditTask}
+      />
 
       {/* Delete task */}
       <ConfirmDialog

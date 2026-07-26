@@ -225,6 +225,35 @@ test('apply a template to a list', async ({ page, perf }) => {
   });
 });
 
+test('type into the add-task modal', async ({ page, perf }) => {
+  const TEXT = 'Buy milk, eggs, bread and a birthday card';
+
+  await page.goto(`/task-lists/${perf.list.id}`);
+  await expect(page.getByText(perf.list.taskTitle(0), { exact: true })).toBeVisible();
+
+  // No API calls in this one — it is pure render cost, which a desktop-class
+  // CPU would hide. Throttling puts it back on the phone the app runs on.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+
+  await benchmark(page, perf.tracker, {
+    name: 'type:add-task-modal',
+    description: 'Type 40 characters into the add-task modal over a 20-task list',
+    arrange: async () => {
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Add task' }).click();
+      await page.getByLabel('Title').click();
+    },
+    act: async () => {
+      const input = page.getByLabel('Title');
+      await input.pressSequentially(TEXT, { delay: 0 });
+      await expect(input).toHaveValue(TEXT);
+    },
+  });
+
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+});
+
 test('background polling cost while idle', async ({ page, perf }) => {
   await page.goto(`/task-lists/${perf.list.id}`);
   await expect(page.getByText(perf.list.taskTitle(0), { exact: true })).toBeVisible();

@@ -7,8 +7,8 @@ import { httpError } from '@/lib/httpError';
  * Access control is expressed as statements rather than a function that runs
  * them, so callers can batch the check with their own work: over a remote
  * database it is free when it rides along and a whole round trip when it
- * doesn't. Pair with `assertWriteAccess`, which applies the same rules the
- * standalone `checkWriteAccess` did.
+ * doesn't. Pair with `assertWriteAccess`, which applies the rules the
+ * standalone check used to.
  */
 export function listRowStatement(db: Db, listId: string) {
   return db.select({ id: taskLists.id, ownerId: taskLists.ownerId }).from(taskLists).where(eq(taskLists.id, listId));
@@ -24,7 +24,7 @@ export function myShareStatement(db: Db, listId: string, userId: string) {
 type ListRow = { id: string; ownerId: string };
 type ShareRow = { permission: Permission };
 
-/** 403 for a missing list too — mirrors the original checkWriteAccess. */
+/** 403 for a missing list too, as the standalone check did. */
 export function assertWriteAccess(listRows: ListRow[], shareRows: ShareRow[], userId: string): void {
   const list = listRows[0];
   if (!list) httpError(403, 'Forbidden');
@@ -155,15 +155,6 @@ export async function getTaskListVersion(db: Db, listId: string, userId: string)
 
   const { count, latest } = taskRows[0] ?? { count: 0, latest: null };
   return `${listRow.updatedAt.getTime()}-${count}-${latest ?? 0}`;
-}
-
-/**
- * Standalone access check, for callers with nothing to batch it with. Prefer
- * `listRowStatement` + `myShareStatement` inside an existing batch.
- */
-export async function checkWriteAccess(db: Db, listId: string, userId: string): Promise<void> {
-  const [listRows, shareRows] = await db.batch([listRowStatement(db, listId), myShareStatement(db, listId, userId)]);
-  assertWriteAccess(listRows, shareRows, userId);
 }
 
 export async function updateTaskList(db: Db, listId: string, userId: string, name: string) {
