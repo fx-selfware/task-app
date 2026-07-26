@@ -1,6 +1,6 @@
 const BASE = '/api';
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
@@ -8,6 +8,18 @@ class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+/**
+ * The server answered, and refused. Distinguishing this from every other
+ * failure is the whole point: a refusal is final, so retrying only asks the
+ * same question again — while a request that never got an answer at all (no
+ * network, a serverless function or database still waking up) says nothing
+ * about whether the session is any good, and is worth another try.
+ */
+export function isRefusal(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false;
+  return error.status === 401 || error.status === 403 || error.status === 404;
 }
 
 export async function request<T>(

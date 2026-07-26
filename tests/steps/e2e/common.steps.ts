@@ -4,11 +4,18 @@ import { expect } from '@playwright/test';
 
 const unique = () => `e2e_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
+/**
+ * The name every "logged in as a new user" scenario registers under. Exported
+ * because the sidebar renders it from /api/auth/me, which makes it the one
+ * thing on screen that proves the session was actually confirmed.
+ */
+export const NEW_USER_NAME = 'Test User';
+
 Given('I am logged in as a new user', async ({ page }) => {
   await page.context().clearCookies();
   const email = `${unique()}@example.com`;
   await page.goto('/register');
-  await page.fill('input[type="text"]', 'Test User');
+  await page.fill('input[type="text"]', NEW_USER_NAME);
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', 'password123');
   await page.click('button[type="submit"]');
