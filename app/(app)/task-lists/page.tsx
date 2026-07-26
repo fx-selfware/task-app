@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createId } from '@paralleldrive/cuid2';
 import Link from 'next/link';
 import { useTaskLists, useCreateTaskList, useDeleteTaskList } from '@/hooks/useTaskLists';
 import { Button } from '@/components/Button';
@@ -27,7 +28,7 @@ export default function TaskListsPage() {
     e.preventDefault();
     setCreateError('');
     try {
-      await createList.mutateAsync(newListName);
+      await createList.mutateAsync({ name: newListName, id: createId() });
       setNewListName('');
       setShowCreate(false);
     } catch (err: unknown) {

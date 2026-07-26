@@ -24,6 +24,13 @@ Feature: Database round trips
     Then the status is 200
     And the request used at most 2 database round trips
 
+  Scenario: Polling a list for changes is cheaper than reading it
+    Given I own a task list named "Polled List"
+    And I have a task "Task A" in that list
+    When I GET the version of that task list
+    Then the status is 200
+    And the request used at most 1 database round trip
+
   Scenario: Creating a task
     Given I own a task list named "Write List"
     When I POST a task titled "New Task" to that list

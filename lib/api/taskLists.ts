@@ -10,7 +10,10 @@ export const taskListsApi = {
       `/task-lists/${id}`,
     ),
 
-  create: (name: string) => api.post<{ list: TaskList }>('/task-lists', { name }),
+  /** Opaque change token; see hooks/useTaskListEvents. */
+  getVersion: (id: string) => api.get<{ version: string }>(`/task-lists/${id}/version`),
+
+  create: (name: string, id?: string) => api.post<{ list: TaskList }>('/task-lists', { name, id }),
 
   rename: (id: string, name: string) =>
     api.patch<{ list: TaskList }>(`/task-lists/${id}`, { name }),

@@ -37,6 +37,10 @@ Given('I own {int} templates each with {int} tasks', async ({ world }, templateC
   }
 });
 
+When('I GET the version of that task list', async ({ world }) => {
+  await world.request('GET', `/api/task-lists/${world.listId}/version`, { cookie: world.myCookie });
+});
+
 When('I POST a task titled {string} to that list', async ({ world }, title: string) => {
   await world.request('POST', `/api/task-lists/${world.listId}/tasks`, {
     payload: { title },

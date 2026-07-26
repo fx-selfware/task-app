@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useLayoutEffect, useRef } from 'react';
+import { createId } from '@paralleldrive/cuid2';
 import { useParams } from 'next/navigation';
 import {
   DndContext,
@@ -77,9 +78,7 @@ export default function TemplateDetailPage() {
   const [deleteTarget, setDeleteTarget] = useState<TemplateTask | null>(null);
   const [showApply, setShowApply] = useState(false);
   const [applyListId, setApplyListId] = useState('');
-  const [applySuccess, setApplySuccess] = useState(false);
   const [showShares, setShowShares] = useState(false);
-  const [localOrder, setLocalOrder] = useState<string[] | null>(null);
   const [collapsedParents, toggleCollapse] = useToggleSet();
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const preCollapseTopRef = useRef(0);
@@ -109,32 +108,26 @@ export default function TemplateDetailPage() {
     (l) => l.role === 'owner' || l.permission === 'WRITE',
   );
 
-  const rawTasks = template.tasks ?? [];
-  const tasks = localOrder
-    ? localOrder.map((tid) => rawTasks.find((t) => t.id === tid)!).filter(Boolean)
-    : rawTasks;
+  const tasks = template.tasks ?? [];
 
   const totalTaskCount = tasks.reduce(
     (sum, t) => sum + 1 + (t.subtasks?.length ?? 0),
     0,
   );
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
     const oldIndex = tasks.findIndex((t) => t.id === active.id);
     const newIndex = tasks.findIndex((t) => t.id === over.id);
-    const newOrder = arrayMove(tasks, oldIndex, newIndex);
-    const newIds = newOrder.map((t) => t.id);
-    setLocalOrder(newIds);
-    await reorderTasks.mutateAsync({ orderedIds: newIds });
-    setLocalOrder(null);
+    const newIds = arrayMove(tasks, oldIndex, newIndex).map((t) => t.id);
+    reorderTasks.mutate({ orderedIds: newIds });
   };
 
-  const handleRename = async (e: React.FormEvent) => {
+  const handleRename = (e: React.FormEvent) => {
     e.preventDefault();
-    await renameTemplate.mutateAsync({ id: id!, name: renameName });
+    renameTemplate.mutate({ id: id!, name: renameName });
     setShowRename(false);
   };
 
@@ -152,9 +145,10 @@ export default function TemplateDetailPage() {
     setShowAddTask(true);
   };
 
-  const handleAddTask = async (e: React.FormEvent) => {
+  const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
-    await createTask.mutateAsync({
+    createTask.mutate({
+      id: createId(),
       title: newTaskTitle,
       description: newTaskDesc,
       ...(addSubtaskParentId && { parentId: addSubtaskParentId }),
@@ -171,10 +165,10 @@ export default function TemplateDetailPage() {
     setEditingTask(task);
   };
 
-  const handleEditTask = async (e: React.FormEvent) => {
+  const handleEditTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTask) return;
-    await updateTask.mutateAsync({
+    updateTask.mutate({
       taskId: editingTask.id,
       data: { title: editTitle, description: editDesc.trim() },
     });
@@ -184,12 +178,8 @@ export default function TemplateDetailPage() {
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
     await applyTemplate.mutateAsync({ templateId: id!, taskListId: applyListId });
-    setApplySuccess(true);
-    setTimeout(() => {
-      setShowApply(false);
-      setApplySuccess(false);
-      setApplyListId('');
-    }, 1500);
+    setShowApply(false);
+    setApplyListId('');
   };
 
   return (
@@ -275,9 +265,7 @@ export default function TemplateDetailPage() {
                         <SubtaskDndList
                           items={subtasks}
                           sensors={sensors}
-                          onReorder={async (ids) => {
-                            await reorderTasks.mutateAsync({ orderedIds: ids, parentId: task.id });
-                          }}
+                          onReorder={(ids) => reorderTasks.mutate({ orderedIds: ids, parentId: task.id })}
                           renderItem={(sub) => (
                             <SortableSubtaskCard
                               key={sub.id}
@@ -431,9 +419,9 @@ export default function TemplateDetailPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={async () => {
+        onConfirm={() => {
           if (deleteTarget) {
-            await deleteTask.mutateAsync(deleteTarget.id);
+            deleteTask.mutate(deleteTarget.id);
             setDeleteTarget(null);
           }
         }}
@@ -445,42 +433,30 @@ export default function TemplateDetailPage() {
       {/* Apply to list */}
       <Modal open={showApply} onClose={() => setShowApply(false)} title="Apply Template">
         <form onSubmit={handleApply} className="space-y-4">
-          {applySuccess ? (
-            <p className="text-sm font-medium text-green-600">Tasks added successfully!</p>
-          ) : (
-            <>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Target list
-                </label>
-                <select
-                  value={applyListId}
-                  onChange={(e) => setApplyListId(e.target.value)}
-                  required
-                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select a list...</option>
-                  {allLists.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowApply(false)}
-                  type="button"
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" loading={applyTemplate.isPending}>
-                  Apply
-                </Button>
-              </div>
-            </>
-          )}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Target list</label>
+            <select
+              value={applyListId}
+              onChange={(e) => setApplyListId(e.target.value)}
+              required
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a list...</option>
+              {allLists.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setShowApply(false)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" loading={applyTemplate.isPending}>
+              Apply
+            </Button>
+          </div>
         </form>
       </Modal>
 
@@ -493,9 +469,9 @@ export default function TemplateDetailPage() {
             ? tasks.filter((t) => t.id !== moveTarget.id && t.id !== moveTarget.parentId)
             : []
         }
-        onSelect={async (parentId) => {
+        onSelect={(parentId) => {
           if (moveTarget) {
-            await moveTemplateTask.mutateAsync({ taskId: moveTarget.id, parentId });
+            moveTemplateTask.mutate({ taskId: moveTarget.id, parentId });
             setMoveTarget(null);
           }
         }}

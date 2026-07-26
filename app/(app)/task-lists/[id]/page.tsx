@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { createId } from '@paralleldrive/cuid2';
 import { useParams, useRouter } from 'next/navigation';
 import {
   DndContext,
@@ -70,7 +71,6 @@ export default function TaskListDetailPage() {
   const [editTarget, setEditTarget] = useState<Task | null>(null);
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [editTaskDesc, setEditTaskDesc] = useState('');
-  const [localOrder, setLocalOrder] = useState<string[] | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showDeleteCompleted, setShowDeleteCompleted] = useState(false);
   const [collapsedParents, toggleCollapse] = useToggleSet();
@@ -106,9 +106,9 @@ export default function TaskListDetailPage() {
     if (el) setDragYOffset(preCollapseTopRef.current - el.getBoundingClientRect().top);
   }, [activeDragId]);
 
-  const todoTasks = localOrder
-    ? localOrder.map((tid) => tasks.find((t) => t.id === tid)!).filter(Boolean)
-    : tasks.filter((t) => (t.status === 'TODO' && !uncompletingIds.has(t.id)) || completingIds.has(t.id));
+  const todoTasks = tasks.filter(
+    (t) => (t.status === 'TODO' && !uncompletingIds.has(t.id)) || completingIds.has(t.id),
+  );
 
   // Build groups for the completed section
   const completedGroups: { parent: Task; parentMode: 'completed' | 'readonly-header'; completedSubtasks: Task[] }[] = [];
@@ -231,17 +231,14 @@ export default function TaskListDetailPage() {
   const { list, isOwner, permission } = data;
   const canWrite = permission === 'WRITE';
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
     const oldIndex = todoTasks.findIndex((t) => t.id === active.id);
     const newIndex = todoTasks.findIndex((t) => t.id === over.id);
-    const newOrder = arrayMove(todoTasks, oldIndex, newIndex);
-    const newIds = newOrder.map((t) => t.id);
-    setLocalOrder(newIds);
-    await reorderTasks.mutateAsync({ orderedIds: newIds });
-    setLocalOrder(null);
+    const newIds = arrayMove(todoTasks, oldIndex, newIndex).map((t) => t.id);
+    reorderTasks.mutate({ orderedIds: newIds });
   };
 
   const openAddTask = () => {
@@ -258,9 +255,10 @@ export default function TaskListDetailPage() {
     setShowAddTask(true);
   };
 
-  const handleAddTask = async (e: React.FormEvent) => {
+  const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
-    await createTask.mutateAsync({
+    createTask.mutate({
+      id: createId(),
       title: newTaskTitle,
       description: newTaskDesc,
       ...(addSubtaskParentId && { parentId: addSubtaskParentId }),
@@ -271,14 +269,14 @@ export default function TaskListDetailPage() {
     setAddSubtaskParentId(null);
   };
 
-  const handleRename = async (e: React.FormEvent) => {
+  const handleRename = (e: React.FormEvent) => {
     e.preventDefault();
-    await renameList.mutateAsync({ id: id!, name: renameName });
+    renameList.mutate({ id: id!, name: renameName });
     setShowRename(false);
   };
 
-  const handleDeleteList = async () => {
-    await deleteList.mutateAsync(id!);
+  const handleDeleteList = () => {
+    deleteList.mutate(id!);
     router.push('/task-lists');
   };
 
@@ -288,10 +286,10 @@ export default function TaskListDetailPage() {
     setEditTarget(task);
   };
 
-  const handleEditTask = async (e: React.FormEvent) => {
+  const handleEditTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editTarget) return;
-    await updateTask.mutateAsync({
+    updateTask.mutate({
       taskId: editTarget.id,
       data: {
         title: editTaskTitle,
@@ -398,9 +396,7 @@ export default function TaskListDetailPage() {
                           <SubtaskDndList
                             items={todoSubs}
                             sensors={sensors}
-                            onReorder={async (ids) => {
-                              await reorderTasks.mutateAsync({ orderedIds: ids, parentId: task.id });
-                            }}
+                            onReorder={(ids) => reorderTasks.mutate({ orderedIds: ids, parentId: task.id })}
                             renderItem={(sub) => (
                               <div
                                 key={sub.id}
@@ -626,9 +622,9 @@ export default function TaskListDetailPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={async () => {
+        onConfirm={() => {
           if (deleteTarget) {
-            await deleteTask.mutateAsync(deleteTarget.id);
+            deleteTask.mutate(deleteTarget.id);
             setDeleteTarget(null);
           }
         }}
@@ -641,8 +637,8 @@ export default function TaskListDetailPage() {
       <ConfirmDialog
         open={showDeleteCompleted}
         onClose={() => setShowDeleteCompleted(false)}
-        onConfirm={async () => {
-          await deleteCompletedTasks.mutateAsync();
+        onConfirm={() => {
+          deleteCompletedTasks.mutate();
           setShowDeleteCompleted(false);
         }}
         title="Delete Completed Tasks"
@@ -669,9 +665,9 @@ export default function TaskListDetailPage() {
             ? todoTasks.filter((t) => t.id !== moveTarget.id && t.id !== moveTarget.parentId)
             : []
         }
-        onSelect={async (parentId) => {
+        onSelect={(parentId) => {
           if (moveTarget) {
-            await moveTask.mutateAsync({ taskId: moveTarget.id, parentId });
+            moveTask.mutate({ taskId: moveTarget.id, parentId });
             setMoveTarget(null);
           }
         }}

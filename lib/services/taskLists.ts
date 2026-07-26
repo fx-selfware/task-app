@@ -74,8 +74,12 @@ export async function getTaskLists(db: Db, userId: string) {
   return { owned, shared };
 }
 
-export async function createTaskList(db: Db, userId: string, name: string) {
-  return await db.insert(taskLists).values({ name, ownerId: userId }).returning().get();
+export async function createTaskList(db: Db, userId: string, name: string, id?: string) {
+  return await db
+    .insert(taskLists)
+    .values({ ...(id ? { id } : {}), name, ownerId: userId })
+    .returning()
+    .get();
 }
 
 export async function getTaskListWithAccess(db: Db, listId: string, userId: string) {
@@ -123,6 +127,34 @@ export async function getTaskListWithAccess(db: Db, listId: string, userId: stri
   const list = { ...listRow, tasks: topLevelTasks, shares, owner };
 
   return { list, isOwner, permission };
+}
+
+/**
+ * A cheap stand-in for the whole list, so a poll that finds nothing new costs
+ * one round trip and a few bytes instead of two and the entire task set. Any
+ * write bumps a task's updated_at or changes the row count, and renaming
+ * bumps the list's own; shares are excluded because the share modal
+ * invalidates directly when it changes them.
+ */
+export async function getTaskListVersion(db: Db, listId: string, userId: string): Promise<string> {
+  const [listRows, shareRows, taskRows] = await db.batch([
+    db
+      .select({ id: taskLists.id, ownerId: taskLists.ownerId, updatedAt: taskLists.updatedAt })
+      .from(taskLists)
+      .where(eq(taskLists.id, listId)),
+    myShareStatement(db, listId, userId),
+    db
+      .select({ count: sql<number>`count(*)`, latest: sql<number | null>`max(${tasks.updatedAt})` })
+      .from(tasks)
+      .where(eq(tasks.taskListId, listId)),
+  ]);
+
+  const listRow = listRows[0];
+  if (!listRow) httpError(404, 'Not found');
+  if (listRow.ownerId !== userId && !shareRows[0]) httpError(404, 'Not found');
+
+  const { count, latest } = taskRows[0] ?? { count: 0, latest: null };
+  return `${listRow.updatedAt.getTime()}-${count}-${latest ?? 0}`;
 }
 
 /**

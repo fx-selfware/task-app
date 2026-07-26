@@ -12,6 +12,8 @@ import { assertWriteAccess, listRowStatement, myShareStatement } from '@/lib/ser
  */
 
 export interface CreateTaskInput {
+  /** Client-generated so the optimistic row is the real row; see lib/ids.ts. */
+  id?: string;
   title: string;
   description?: string;
   parentId?: string;
@@ -59,7 +61,14 @@ export async function createTask(db: Db, taskListId: string, userId: string, inp
 
   return await db
     .insert(tasks)
-    .values({ title: input.title, description: input.description, order, taskListId, parentId: effectiveParentId })
+    .values({
+      ...(input.id ? { id: input.id } : {}),
+      title: input.title,
+      description: input.description,
+      order,
+      taskListId,
+      parentId: effectiveParentId,
+    })
     .returning()
     .get();
 }

@@ -10,7 +10,7 @@ export const templatesApi = {
       `/templates/${id}`,
     ),
 
-  create: (name: string) => api.post<{ template: TaskTemplate }>('/templates', { name }),
+  create: (name: string, id?: string) => api.post<{ template: TaskTemplate }>('/templates', { name, id }),
 
   rename: (id: string, name: string) =>
     api.patch<{ template: TaskTemplate }>(`/templates/${id}`, { name }),
@@ -19,7 +19,7 @@ export const templatesApi = {
 
   createTask: (
     templateId: string,
-    data: { title: string; description?: string; parentId?: string },
+    data: { id?: string; title: string; description?: string; parentId?: string },
   ) => api.post<{ task: TemplateTask }>(`/templates/${templateId}/tasks`, data),
 
   updateTask: (

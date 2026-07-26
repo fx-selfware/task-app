@@ -14,9 +14,13 @@ import { httpError } from '@/lib/httpError';
 
 export interface CreateTemplateInput {
   name: string;
+  /** Client-generated so the optimistic row is the real row; see lib/ids.ts. */
+  id?: string;
 }
 
 export interface CreateTemplateTaskInput {
+  /** Client-generated so the optimistic row is the real row; see lib/ids.ts. */
+  id?: string;
   title: string;
   description?: string;
   parentId?: string;
@@ -75,7 +79,11 @@ export async function getTemplates(db: Db, userId: string) {
 }
 
 export async function createTemplate(db: Db, userId: string, input: CreateTemplateInput) {
-  return await db.insert(taskTemplates).values({ name: input.name, ownerId: userId }).returning().get();
+  return await db
+    .insert(taskTemplates)
+    .values({ ...(input.id ? { id: input.id } : {}), name: input.name, ownerId: userId })
+    .returning()
+    .get();
 }
 
 export async function getTemplateWithAccess(db: Db, templateId: string, userId: string) {
@@ -178,7 +186,14 @@ export async function createTemplateTask(db: Db, templateId: string, userId: str
 
   return await db
     .insert(templateTasks)
-    .values({ title: input.title, description: input.description, order, templateId, parentId: effectiveParentId })
+    .values({
+      ...(input.id ? { id: input.id } : {}),
+      title: input.title,
+      description: input.description,
+      order,
+      templateId,
+      parentId: effectiveParentId,
+    })
     .returning()
     .get();
 }
