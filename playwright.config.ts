@@ -7,14 +7,18 @@ import { defineBddConfig } from 'playwright-bdd';
 const TEST_PORT = Number(process.env.TEST_PORT ?? 8099);
 const BASE_URL = process.env.BASE_URL ?? `http://localhost:${TEST_PORT}`;
 const TEST_DB_URL = `file:${path.join(__dirname, '.test', 'test.db')}`;
+const TEST_JWT_SECRET = 'test-jwt-secret-at-least-32-chars!';
 
 // The test runner (steps reset the DB directly) and the web server must agree
 // on the SQLite file. This module is loaded by every Playwright worker.
 process.env.TURSO_DATABASE_URL ??= TEST_DB_URL;
+// And on the signing secret, so a step can forge the expired token that
+// features/e2e/auth.feature needs.
+process.env.JWT_SECRET ??= TEST_JWT_SECRET;
 
 const serverEnv = {
   TURSO_DATABASE_URL: TEST_DB_URL,
-  JWT_SECRET: 'test-jwt-secret-at-least-32-chars!',
+  JWT_SECRET: TEST_JWT_SECRET,
   COOKIE_SECURE: 'false',
   ADMIN_EMAILS: 'admin@example.com,admin@test.com',
   PORT: String(TEST_PORT),

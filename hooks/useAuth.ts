@@ -7,7 +7,9 @@ export function useMe() {
   return useQuery({
     queryKey: ['me'],
     queryFn: () => authApi.me().then((r) => r.user),
-    retry: false,
+    // Retries are left to the shared policy in Providers: a refused token
+    // fails immediately, everything else gets another go. Opting out here
+    // turned any stumble on a cold launch into an apparent logout.
     staleTime: 5 * 60 * 1000,
   });
 }
