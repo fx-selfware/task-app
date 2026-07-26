@@ -4,7 +4,8 @@ import { createClient } from '@libsql/client';
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
 import { migrate } from 'drizzle-orm/libsql/migrator';
 import * as schema from '@/db/schema';
-import { withSimulatedLatency } from '@/lib/dbLatency';
+import { instrumentClient } from '@/lib/dbInstrument';
+import { dbMetricsEnabled, recordRoundTrip } from '@/lib/dbMetrics';
 
 export type Db = LibSQLDatabase<typeof schema>;
 
@@ -21,9 +22,16 @@ async function init(): Promise<Db> {
   }
 
   const rawClient = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
-  // Perf benchmark only (tests/perf) — unset everywhere else, including prod.
-  const latencyMs = Number(process.env.PERF_DB_LATENCY_MS ?? 0);
-  const client = latencyMs > 0 ? withSimulatedLatency(rawClient, latencyMs) : rawClient;
+
+  // Test-only hooks, both inert unless their env var is set (see lib/dbInstrument):
+  // PERF_DB_LATENCY_MS makes a local database feel remote for tests/perf,
+  // EXPOSE_DB_METRICS counts round trips for features/api/round-trips.feature.
+  const delayMs = Number(process.env.PERF_DB_LATENCY_MS ?? 0);
+  const instrumented = delayMs > 0 || dbMetricsEnabled;
+  const client = instrumented
+    ? instrumentClient(rawClient, { delayMs, onRoundTrip: dbMetricsEnabled ? recordRoundTrip : undefined })
+    : rawClient;
+
   const db = drizzle(client, { schema });
 
   if (url.startsWith('file:')) {

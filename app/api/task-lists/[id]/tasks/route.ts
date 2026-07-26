@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handle, jsonError, readJson } from '@/lib/apiHandler';
 import { requireAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
-import { checkWriteAccess } from '@/lib/services/taskLists';
 import { createTask } from '@/lib/services/tasks';
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -18,8 +17,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     if (!title) return jsonError(400, 'title is required');
 
     const db = await getDb();
-    await checkWriteAccess(db, id, user.userId);
-    const task = await createTask(db, id, { title, description, parentId });
+    const task = await createTask(db, id, user.userId, { title, description, parentId });
     return NextResponse.json({ task }, { status: 201 });
   });
 }

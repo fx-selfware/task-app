@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handle, readJson } from '@/lib/apiHandler';
 import { requireAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
-import { checkWriteAccess } from '@/lib/services/taskLists';
 import { deleteTask, updateTask, type UpdateTaskInput } from '@/lib/services/tasks';
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string; tid: string }> }) {
@@ -12,8 +11,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     const body = (await readJson(request)) as UpdateTaskInput;
 
     const db = await getDb();
-    await checkWriteAccess(db, id, user.userId);
-    const task = await updateTask(db, id, tid, body);
+    const task = await updateTask(db, id, user.userId, tid, body);
     return NextResponse.json({ task });
   });
 }
@@ -24,8 +22,7 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     const user = requireAuth(request);
 
     const db = await getDb();
-    await checkWriteAccess(db, id, user.userId);
-    await deleteTask(db, id, tid);
+    await deleteTask(db, id, user.userId, tid);
     return new NextResponse(null, { status: 204 });
   });
 }
