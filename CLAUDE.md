@@ -78,4 +78,6 @@ Cleanup: `tests/support/globalTeardown.ts` deletes every account the suite creat
 
 ### Deployment
 
-Production is Vercel (git integration deploys `main`; PRs get preview URLs) + Turso via the Vercel Marketplace integration. See the Deployment section in README.md. Backups: `turso db shell <db> .dump`.
+Production is Vercel (git integration deploys `main`; PRs get preview URLs) + Turso via the Vercel Marketplace integration.
+
+**`vercel.json` pins functions to `pdx1`, which must stay in the same region as the Turso primary** (`aws-us-west-2`). Vercel defaults new projects to `iad1`, and that default cost ~66ms per database round trip measured against production — more than every query optimisation in the app put together. If the database ever moves, move this with it: `turso db show <db>` prints the primary's location, and https://vercel.com/docs/regions maps AWS regions to Vercel codes. Hobby allows one region, which is all this needs. See the Deployment section in README.md. Backups: `turso db shell <db> .dump`.
