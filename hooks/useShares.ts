@@ -48,6 +48,11 @@ export function useUpdateShare(listId: string) {
     onError: (_err, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(sharesKey(listId), context.previous);
     },
+    // The list's own permission and canWrite come from the detail response.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sharesKey(listId) });
+      queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
+    },
   });
 }
 
@@ -70,6 +75,7 @@ export function useDeleteShare(listId: string) {
       if (context?.previous) queryClient.setQueryData(sharesKey(listId), context.previous);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sharesKey(listId) });
       queryClient.invalidateQueries({ queryKey: ['task-lists', listId] });
     },
   });

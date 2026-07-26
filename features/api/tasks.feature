@@ -149,3 +149,38 @@ Feature: Tasks API
     When I PATCH that task with body '{"status":"DONE"}' for "Parent"
     And I move task "Orphan" under "Parent" in that list
     Then the status is 400
+
+  Scenario: A client-supplied id is used as the task id
+    Given I own a task list named "Id List"
+    When I POST a task titled "Chosen" with id "abcdefghij0123456789"
+    Then the status is 201
+    And the created task has id "abcdefghij0123456789"
+
+  Scenario: A malformed client id is ignored rather than rejected
+    Given I own a task list named "Id List"
+    When I POST a task titled "Server Id" with id "../../etc/passwd"
+    Then the status is 201
+    And the created task has a server-generated id
+
+  Scenario: A client id already in use falls back to a server-generated one
+    Given I own a task list named "Id List"
+    And I have a task "First" in that list
+    When I POST a task titled "Second" reusing the id of "First"
+    Then the status is 201
+    And the created task has a server-generated id
+
+  Scenario: An unknown status is rejected
+    Given I own a task list named "Status List"
+    And I have a task "Solid" in that list
+    When I PATCH that task with body '{"status":"PWNED"}'
+    Then the status is 400
+
+  Scenario: Deleting completed tasks removes a completed parent and its subtasks
+    Given I own a task list named "Cleanup List"
+    And I have a task "Parent" in that list
+    And I have a subtask "Child" under "Parent" in that list
+    And I have a task "Survivor" in that list
+    And I PATCH that task with body '{"status":"DONE"}' for "Parent"
+    When I DELETE completed tasks from that list
+    Then the status is 204
+    And the list contains only "Survivor"

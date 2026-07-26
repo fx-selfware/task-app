@@ -1,6 +1,5 @@
 'use client';
 
-import { createId } from '@paralleldrive/cuid2';
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { taskListsApi } from '@/lib/api/taskLists';
 import type { TaskList, TaskListSummary } from '@/types';
@@ -41,9 +40,13 @@ export function useTaskList(id: string) {
   });
 }
 
+/** See hooks/useTasks: creating a list then renaming it must arrive in order. */
+const indexScope = { id: 'task-lists' };
+
 export function useCreateTaskList() {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: indexScope,
     mutationFn: ({ name, id }: { name: string; id: string }) => taskListsApi.create(name, id),
     onMutate: async ({ name, id: newId }) => {
       const now = new Date().toISOString();
@@ -83,6 +86,7 @@ export function useCreateTaskList() {
 export function useRenameTaskList() {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: indexScope,
     mutationFn: ({ id, name }: { id: string; name: string }) => taskListsApi.rename(id, name),
     onMutate: async ({ id, name }) => {
       const rename = <T extends { id: string; name: string }>(l: T) => (l.id === id ? { ...l, name } : l);
@@ -108,6 +112,7 @@ export function useRenameTaskList() {
 export function useDeleteTaskList() {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: indexScope,
     mutationFn: (id: string) => taskListsApi.delete(id),
     onMutate: (id) =>
       patchIndex(queryClient, (index) => ({

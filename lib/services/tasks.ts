@@ -2,6 +2,7 @@ import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 import { tasks, type TaskStatus } from '@/db/schema';
 import type { Db } from '@/lib/db';
 import { httpError } from '@/lib/httpError';
+import { insertWithClientId } from '@/lib/ids';
 import { assertWriteAccess, listRowStatement, myShareStatement } from '@/lib/services/taskLists';
 
 /**
@@ -59,18 +60,22 @@ export async function createTask(db: Db, taskListId: string, userId: string, inp
 
   const order = (maxRows[0]?.maxOrder ?? -1) + 1;
 
-  return await db
-    .insert(tasks)
-    .values({
-      ...(input.id ? { id: input.id } : {}),
-      title: input.title,
-      description: input.description,
-      order,
-      taskListId,
-      parentId: effectiveParentId,
-    })
-    .returning()
-    .get();
+  return await insertWithClientId(
+    (id) =>
+      db
+        .insert(tasks)
+        .values({
+          ...(id ? { id } : {}),
+          title: input.title,
+          description: input.description,
+          order,
+          taskListId,
+          parentId: effectiveParentId,
+        })
+        .returning()
+        .get(),
+    input.id,
+  );
 }
 
 export async function updateTask(
@@ -199,7 +204,15 @@ export async function moveTask(
       listRowStatement(db, taskListId),
       myShareStatement(db, taskListId, userId),
       db.select().from(tasks).where(and(eq(tasks.id, taskId), eq(tasks.taskListId, taskListId))),
-      db.select().from(tasks).where(sql`${tasks.id} = (select parent_id from tasks where id = ${taskId})`),
+      db
+        .select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.taskListId, taskListId),
+            sql`${tasks.id} = (select parent_id from tasks where id = ${taskId})`,
+          ),
+        ),
       db.select({ count: sql<number>`count(*)` }).from(tasks).where(eq(tasks.parentId, taskId)),
       db
         .select()

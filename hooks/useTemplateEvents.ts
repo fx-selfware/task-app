@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useIsMutating, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -11,21 +11,34 @@ const POLL_INTERVAL_MS = 3000;
  *
  * Unlike a task list, a template is read in a single database round trip, so
  * there is no cheaper token to poll for: asking for the template itself costs
- * exactly what asking whether it changed would. The interval is paused while
- * the tab is hidden and while a mutation is in flight, for the same reasons.
+ * exactly what asking whether it changed would.
  */
 export function useTemplateEvents(templateId: string) {
   const queryClient = useQueryClient();
-  const isMutating = useIsMutating() > 0;
 
   useEffect(() => {
-    if (!templateId || isMutating) return;
+    if (!templateId) return;
 
     const interval = setInterval(() => {
       if (document.visibilityState === 'hidden') return;
+      // Checked inside the tick rather than as an effect dependency: as a
+      // dependency it would tear down and restart the interval on every
+      // mutation, so anyone editing faster than the interval would never poll.
+      if (queryClient.isMutating() > 0) return;
       queryClient.invalidateQueries({ queryKey: ['templates', templateId] });
     }, POLL_INTERVAL_MS);
 
-    return () => clearInterval(interval);
-  }, [templateId, isMutating, queryClient]);
+    // Catch up immediately on returning to the tab.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        queryClient.invalidateQueries({ queryKey: ['templates', templateId] });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [templateId, queryClient]);
 }

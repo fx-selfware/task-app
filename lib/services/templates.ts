@@ -11,6 +11,7 @@ import {
 } from '@/db/schema';
 import type { Db } from '@/lib/db';
 import { httpError } from '@/lib/httpError';
+import { insertWithClientId } from '@/lib/ids';
 
 export interface CreateTemplateInput {
   name: string;
@@ -79,11 +80,15 @@ export async function getTemplates(db: Db, userId: string) {
 }
 
 export async function createTemplate(db: Db, userId: string, input: CreateTemplateInput) {
-  return await db
-    .insert(taskTemplates)
-    .values({ ...(input.id ? { id: input.id } : {}), name: input.name, ownerId: userId })
-    .returning()
-    .get();
+  return await insertWithClientId(
+    (id) =>
+      db
+        .insert(taskTemplates)
+        .values({ ...(id ? { id } : {}), name: input.name, ownerId: userId })
+        .returning()
+        .get(),
+    input.id,
+  );
 }
 
 export async function getTemplateWithAccess(db: Db, templateId: string, userId: string) {
@@ -184,18 +189,22 @@ export async function createTemplateTask(db: Db, templateId: string, userId: str
     .get();
   const order = (maxRow?.maxOrder ?? -1) + 1;
 
-  return await db
-    .insert(templateTasks)
-    .values({
-      ...(input.id ? { id: input.id } : {}),
-      title: input.title,
-      description: input.description,
-      order,
-      templateId,
-      parentId: effectiveParentId,
-    })
-    .returning()
-    .get();
+  return await insertWithClientId(
+    (id) =>
+      db
+        .insert(templateTasks)
+        .values({
+          ...(id ? { id } : {}),
+          title: input.title,
+          description: input.description,
+          order,
+          templateId,
+          parentId: effectiveParentId,
+        })
+        .returning()
+        .get(),
+    input.id,
+  );
 }
 
 export async function updateTemplateTask(

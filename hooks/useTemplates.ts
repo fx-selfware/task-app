@@ -1,6 +1,5 @@
 'use client';
 
-import { createId } from '@paralleldrive/cuid2';
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { templatesApi } from '@/lib/api/templates';
 import type { Permission, TaskTemplate, TemplateSummary, TemplateTask } from '@/types';
@@ -148,6 +147,10 @@ function reorderInTemplate(detail: TemplateDetail, orderedIds: string[], parentI
   return { ...detail, template: { ...detail.template, tasks } };
 }
 
+/** See hooks/useTasks for why dependent writes must be serialised. */
+const templateScope = (templateId: string) => ({ id: `template-${templateId}` });
+const indexScope = { id: 'templates' };
+
 export function useTemplates() {
   return useQuery({
     queryKey: indexKey,
@@ -167,6 +170,7 @@ export function useTemplate(id: string) {
 export function useCreateTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: indexScope,
     mutationFn: ({ name, id }: { name: string; id: string }) => templatesApi.create(name, id),
     onMutate: async ({ name, id: newId }) => {
       const now = new Date().toISOString();
@@ -206,6 +210,7 @@ export function useCreateTemplate() {
 export function useRenameTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: indexScope,
     mutationFn: ({ id, name }: { id: string; name: string }) => templatesApi.rename(id, name),
     onMutate: async ({ id, name }) => {
       const rename = <T extends { id: string; name: string }>(t: T) => (t.id === id ? { ...t, name } : t);
@@ -229,6 +234,7 @@ export function useRenameTemplate() {
 export function useDeleteTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: indexScope,
     mutationFn: (id: string) => templatesApi.delete(id),
     onMutate: (id) =>
       patchIndex(queryClient, (index) => ({
@@ -247,6 +253,7 @@ export function useDeleteTemplate() {
 export function useCreateTemplateTask(templateId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: templateScope(templateId),
     mutationFn: (data: { id: string; title: string; description?: string; parentId?: string }) =>
       templatesApi.createTask(templateId, data),
     onMutate: async (data) => {
@@ -286,6 +293,7 @@ export function useCreateTemplateTask(templateId: string) {
 export function useUpdateTemplateTask(templateId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: templateScope(templateId),
     mutationFn: ({ taskId, data }: { taskId: string; data: { title?: string; description?: string } }) =>
       templatesApi.updateTask(templateId, taskId, data),
     onMutate: ({ taskId, data }) => patchDetail(queryClient, templateId, (d) => patchTemplateTask(d, taskId, data)),
@@ -302,6 +310,7 @@ export function useUpdateTemplateTask(templateId: string) {
 export function useDeleteTemplateTask(templateId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: templateScope(templateId),
     mutationFn: (taskId: string) => templatesApi.deleteTask(templateId, taskId),
     onMutate: (taskId) => patchDetail(queryClient, templateId, (d) => removeTemplateTask(d, taskId)),
     onError: (_err, _vars, context) => rollbackDetail(queryClient, templateId, context),
@@ -311,6 +320,7 @@ export function useDeleteTemplateTask(templateId: string) {
 export function useMoveTemplateTask(templateId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: templateScope(templateId),
     mutationFn: ({ taskId, parentId }: { taskId: string; parentId: string | null }) =>
       templatesApi.moveTask(templateId, taskId, parentId),
     onMutate: ({ taskId, parentId }) =>
@@ -326,6 +336,7 @@ export function useMoveTemplateTask(templateId: string) {
 export function useReorderTemplateTasks(templateId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: templateScope(templateId),
     mutationFn: ({ orderedIds, parentId }: { orderedIds: string[]; parentId?: string | null }) =>
       templatesApi.reorderTasks(templateId, orderedIds, parentId),
     onMutate: ({ orderedIds, parentId }) =>
@@ -358,6 +369,7 @@ export function useTemplateShares(templateId: string, enabled = true) {
 export function useCreateTemplateShare(templateId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: templateScope(templateId),
     mutationFn: ({ email, permission }: { email: string; permission: Permission }) =>
       templatesApi.createShare(templateId, email, permission),
     // The server resolves the email to a user, so there is nothing to show
@@ -373,6 +385,7 @@ export function useUpdateTemplateShare(templateId: string) {
   const queryClient = useQueryClient();
   const key = ['template-shares', templateId] as const;
   return useMutation({
+    scope: templateScope(templateId),
     mutationFn: ({ shareId, permission }: { shareId: string; permission: Permission }) =>
       templatesApi.updateShare(templateId, shareId, permission),
     onMutate: async ({ shareId, permission }) => {
@@ -389,6 +402,9 @@ export function useUpdateTemplateShare(templateId: string) {
     onError: (_err, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: key });
+    },
   });
 }
 
@@ -396,6 +412,7 @@ export function useDeleteTemplateShare(templateId: string) {
   const queryClient = useQueryClient();
   const key = ['template-shares', templateId] as const;
   return useMutation({
+    scope: templateScope(templateId),
     mutationFn: (shareId: string) => templatesApi.deleteShare(templateId, shareId),
     onMutate: async (shareId) => {
       await queryClient.cancelQueries({ queryKey: key });
@@ -412,6 +429,7 @@ export function useDeleteTemplateShare(templateId: string) {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: key });
       queryClient.invalidateQueries({ queryKey: indexKey, exact: true });
     },
   });

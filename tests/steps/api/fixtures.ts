@@ -23,6 +23,8 @@ export class ApiWorld {
   taskIds: string[] = [];
   tasksByTitle: Record<string, string> = {};
   myUserId: string | null = null;
+  sentTaskId: string | null = null;
+  notedVersion: string | null = null;
 
   constructor(private baseURL: string) {}
 

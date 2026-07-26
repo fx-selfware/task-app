@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { taskLists, taskListShares, tasks, users, type Permission } from '@/db/schema';
 import type { Db } from '@/lib/db';
 import { httpError } from '@/lib/httpError';
+import { insertWithClientId } from '@/lib/ids';
 
 /**
  * Access control is expressed as statements rather than a function that runs
@@ -75,11 +76,15 @@ export async function getTaskLists(db: Db, userId: string) {
 }
 
 export async function createTaskList(db: Db, userId: string, name: string, id?: string) {
-  return await db
-    .insert(taskLists)
-    .values({ ...(id ? { id } : {}), name, ownerId: userId })
-    .returning()
-    .get();
+  return await insertWithClientId(
+    (chosen) =>
+      db
+        .insert(taskLists)
+        .values({ ...(chosen ? { id: chosen } : {}), name, ownerId: userId })
+        .returning()
+        .get(),
+    id,
+  );
 }
 
 export async function getTaskListWithAccess(db: Db, listId: string, userId: string) {
@@ -130,14 +135,18 @@ export async function getTaskListWithAccess(db: Db, listId: string, userId: stri
 }
 
 /**
- * A cheap stand-in for the whole list, so a poll that finds nothing new costs
- * one round trip and a few bytes instead of two and the entire task set. Any
- * write bumps a task's updated_at or changes the row count, and renaming
- * bumps the list's own; shares are excluded because the share modal
- * invalidates directly when it changes them.
+ * A cheap stand-in for everything `getTaskListWithAccess` returns, so a poll
+ * that finds nothing new costs one round trip and a few bytes instead of two
+ * and the entire task set.
+ *
+ * It has to move for every change the detail response would show, which is
+ * wider than the tasks: renaming bumps the list's own updated_at, any task
+ * write bumps a task's or changes the count, and the share aggregate covers
+ * collaborators being added, removed, or moved between READ and WRITE — the
+ * page's `permission` and `canWrite` come from those.
  */
 export async function getTaskListVersion(db: Db, listId: string, userId: string): Promise<string> {
-  const [listRows, shareRows, taskRows] = await db.batch([
+  const [listRows, shareRows, taskRows, shareStats] = await db.batch([
     db
       .select({ id: taskLists.id, ownerId: taskLists.ownerId, updatedAt: taskLists.updatedAt })
       .from(taskLists)
@@ -147,6 +156,15 @@ export async function getTaskListVersion(db: Db, listId: string, userId: string)
       .select({ count: sql<number>`count(*)`, latest: sql<number | null>`max(${tasks.updatedAt})` })
       .from(tasks)
       .where(eq(tasks.taskListId, listId)),
+    db
+      .select({
+        count: sql<number>`count(*)`,
+        // Distinguishes a READ share being upgraded to WRITE, which changes no
+        // row count and no timestamp — task_list_shares has no updated_at.
+        writers: sql<number>`sum(case when ${taskListShares.permission} = 'WRITE' then 1 else 0 end)`,
+      })
+      .from(taskListShares)
+      .where(eq(taskListShares.taskListId, listId)),
   ]);
 
   const listRow = listRows[0];
@@ -154,7 +172,8 @@ export async function getTaskListVersion(db: Db, listId: string, userId: string)
   if (listRow.ownerId !== userId && !shareRows[0]) httpError(404, 'Not found');
 
   const { count, latest } = taskRows[0] ?? { count: 0, latest: null };
-  return `${listRow.updatedAt.getTime()}-${count}-${latest ?? 0}`;
+  const shares = shareStats[0] ?? { count: 0, writers: 0 };
+  return `${listRow.updatedAt.getTime()}-${count}-${latest ?? 0}-${shares.count}-${shares.writers ?? 0}`;
 }
 
 export async function updateTaskList(db: Db, listId: string, userId: string, name: string) {

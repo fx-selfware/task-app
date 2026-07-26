@@ -1,6 +1,5 @@
 'use client';
 
-import { createId } from '@paralleldrive/cuid2';
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { tasksApi } from '@/lib/api/tasks';
 import type { Task, TaskList, TaskStatus } from '@/types';
@@ -169,9 +168,19 @@ function rollback(queryClient: QueryClient, listId: string, context?: { previous
   if (context?.previous) queryClient.setQueryData(listKey(listId), context.previous);
 }
 
+/**
+ * Mutations on one list share a scope so react-query runs them in series.
+ * Client-generated ids let you act on a row the server hasn't seen yet — add a
+ * subtask to a brand new task — and two independent fetches have no ordering
+ * guarantee, so the child could arrive first and be rejected. Serialising
+ * costs nothing the user feels: the cache is already patched.
+ */
+const listScope = (listId: string) => ({ id: `task-list-${listId}` });
+
 export function useCreateTask(listId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: listScope(listId),
     mutationFn: (data: { id: string; title: string; description?: string; parentId?: string }) =>
       tasksApi.create(listId, data),
     onMutate: async (data) => {
@@ -213,6 +222,7 @@ export function useCreateTask(listId: string) {
 export function useUpdateTask(listId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: listScope(listId),
     mutationFn: ({ taskId, data }: { taskId: string; data: UpdateTaskData }) => tasksApi.update(listId, taskId, data),
     onMutate: ({ taskId, data }) => patchListDetail(queryClient, listId, (d) => patchTaskInList(d, taskId, data)),
     onError: (_err, _vars, context) => rollback(queryClient, listId, context),
@@ -226,6 +236,7 @@ export function useUpdateTask(listId: string) {
 export function useDeleteTask(listId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: listScope(listId),
     mutationFn: (taskId: string) => tasksApi.delete(listId, taskId),
     onMutate: (taskId) => patchListDetail(queryClient, listId, (d) => removeTask(d, taskId)),
     onError: (_err, _vars, context) => rollback(queryClient, listId, context),
@@ -235,15 +246,23 @@ export function useDeleteTask(listId: string) {
 export function useDeleteCompletedTasks(listId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: listScope(listId),
     mutationFn: () => tasksApi.deleteCompleted(listId),
     onMutate: () => patchListDetail(queryClient, listId, removeCompletedTasks),
     onError: (_err, _vars, context) => rollback(queryClient, listId, context),
+    // A promoted subtask keeps its old order number and the server sorts it
+    // into the top-level list by that, which the patch above can't predict —
+    // same reason useMoveTask refetches.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: listKey(listId) });
+    },
   });
 }
 
 export function useReorderTasks(listId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: listScope(listId),
     mutationFn: ({ orderedIds, parentId }: { orderedIds: string[]; parentId?: string | null }) =>
       tasksApi.reorder(listId, orderedIds, parentId),
     onMutate: ({ orderedIds, parentId }) =>
@@ -255,6 +274,7 @@ export function useReorderTasks(listId: string) {
 export function useMoveTask(listId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: listScope(listId),
     mutationFn: ({ taskId, parentId }: { taskId: string; parentId: string | null }) =>
       tasksApi.move(listId, taskId, parentId),
     onMutate: ({ taskId, parentId }) =>
