@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useId } from 'react';
+import { useId } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -205,7 +205,7 @@ export function SortableSubtaskCard({
 interface SubtaskDndListProps<T extends { id: string }> {
   items: T[];
   sensors: any;
-  onReorder: (orderedIds: string[]) => Promise<void>;
+  onReorder: (orderedIds: string[]) => void;
   renderItem: (item: T) => React.ReactNode;
 }
 
@@ -216,23 +216,16 @@ export function SubtaskDndList<T extends { id: string }>({
   renderItem,
 }: SubtaskDndListProps<T>) {
   const dndId = useId();
-  const [localOrder, setLocalOrder] = useState<string[] | null>(null);
 
-  const ordered = localOrder
-    ? localOrder.map((id) => items.find((i) => i.id === id)!).filter(Boolean)
-    : items;
-
-  const handleDragEnd = async (event: DragEndEvent) => {
+  // No local copy of the order: the reorder mutation patches the cache
+  // synchronously, so `items` already arrives in the new order.
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = ordered.findIndex((i) => i.id === active.id);
-    const newIndex = ordered.findIndex((i) => i.id === over.id);
-    const newOrder = arrayMove(ordered, oldIndex, newIndex);
-    const newIds = newOrder.map((i) => i.id);
-    setLocalOrder(newIds);
-    await onReorder(newIds);
-    setLocalOrder(null);
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+    onReorder(arrayMove(items, oldIndex, newIndex).map((i) => i.id));
   };
 
   if (items.length === 0) return null;
@@ -244,11 +237,8 @@ export function SubtaskDndList<T extends { id: string }>({
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext
-        items={ordered.map((i) => i.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        {ordered.map(renderItem)}
+      <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+        {items.map(renderItem)}
       </SortableContext>
     </DndContext>
   );

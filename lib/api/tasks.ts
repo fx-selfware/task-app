@@ -4,7 +4,7 @@ import type { Task, TaskStatus } from '@/types';
 export const tasksApi = {
   create: (
     listId: string,
-    data: { title: string; description?: string; parentId?: string },
+    data: { id?: string; title: string; description?: string; parentId?: string },
   ) => api.post<{ task: Task }>(`/task-lists/${listId}/tasks`, data),
 
   update: (

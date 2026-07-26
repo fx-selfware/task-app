@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createId } from '@paralleldrive/cuid2';
 import Link from 'next/link';
 import { useTemplates, useCreateTemplate, useDeleteTemplate } from '@/hooks/useTemplates';
 import { Button } from '@/components/Button';
@@ -27,7 +28,7 @@ export default function TemplatesPage() {
     e.preventDefault();
     setCreateError('');
     try {
-      await createTemplate.mutateAsync(newName);
+      await createTemplate.mutateAsync({ name: newName, id: createId() });
       setNewName('');
       setShowCreate(false);
     } catch (err: unknown) {

@@ -18,6 +18,9 @@ const serverEnv = {
   COOKIE_SECURE: 'false',
   ADMIN_EMAILS: 'admin@example.com,admin@test.com',
   PORT: String(TEST_PORT),
+  // Reports per-request database round trips in a response header, which
+  // features/api/round-trips.feature asserts budgets against.
+  EXPOSE_DB_METRICS: '1',
 };
 
 const apiTestDir = defineBddConfig({

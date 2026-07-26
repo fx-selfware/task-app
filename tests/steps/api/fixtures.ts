@@ -4,6 +4,7 @@ import { resetDb } from '../../support/resetDb';
 export interface ApiResponse {
   statusCode: number;
   setCookies: string[];
+  headers: Headers;
   body: any;
 }
 
@@ -22,6 +23,8 @@ export class ApiWorld {
   taskIds: string[] = [];
   tasksByTitle: Record<string, string> = {};
   myUserId: string | null = null;
+  sentTaskId: string | null = null;
+  notedVersion: string | null = null;
 
   constructor(private baseURL: string) {}
 
@@ -44,7 +47,7 @@ export class ApiWorld {
     } catch {
       body = text;
     }
-    this.response = { statusCode: res.status, setCookies: res.headers.getSetCookie(), body };
+    this.response = { statusCode: res.status, setCookies: res.headers.getSetCookie(), headers: res.headers, body };
     return this.response;
   }
 

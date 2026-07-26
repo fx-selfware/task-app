@@ -19,7 +19,8 @@ interface TemplateSharesModalProps {
 }
 
 export function TemplateSharesModal({ open, onClose, templateId }: TemplateSharesModalProps) {
-  const { data: shares = [], isLoading } = useTemplateShares(templateId);
+  // Gated on `open` — see SharesModal.
+  const { data: shares = [], isLoading } = useTemplateShares(templateId, open);
   const createShare = useCreateTemplateShare(templateId);
   const updateShare = useUpdateTemplateShare(templateId);
   const deleteShare = useDeleteTemplateShare(templateId);

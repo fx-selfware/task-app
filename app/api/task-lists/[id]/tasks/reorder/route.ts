@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handle, jsonError, readJson } from '@/lib/apiHandler';
 import { requireAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
-import { checkWriteAccess } from '@/lib/services/taskLists';
 import { reorderTasks } from '@/lib/services/tasks';
 
 export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -19,8 +18,7 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
     }
 
     const db = await getDb();
-    await checkWriteAccess(db, id, user.userId);
-    await reorderTasks(db, id, orderedIds as string[], parentId ?? null);
+    await reorderTasks(db, id, user.userId, orderedIds as string[], parentId ?? null);
     return NextResponse.json({ ok: true });
   });
 }

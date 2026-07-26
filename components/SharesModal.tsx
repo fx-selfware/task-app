@@ -14,7 +14,9 @@ interface SharesModalProps {
 }
 
 export function SharesModal({ open, onClose, listId }: SharesModalProps) {
-  const { data: shares = [], isLoading } = useShares(listId);
+  // Gated on `open`: this modal is always mounted, and the query would
+  // otherwise fire on every list page load whether or not it is shown.
+  const { data: shares = [], isLoading } = useShares(listId, open);
   const createShare = useCreateShare(listId);
   const updateShare = useUpdateShare(listId);
   const deleteShare = useDeleteShare(listId);

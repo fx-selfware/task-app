@@ -33,3 +33,6 @@ Thumbs.db
 .claude/
 *.swp
 *.swo
+
+# Benchmark reports
+.perf/

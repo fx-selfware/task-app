@@ -1,3 +1,4 @@
+import { createId } from '@paralleldrive/cuid2';
 import { and, asc, eq, gt, isNull, sql } from 'drizzle-orm';
 import {
   taskLists,
@@ -10,12 +11,17 @@ import {
 } from '@/db/schema';
 import type { Db } from '@/lib/db';
 import { httpError } from '@/lib/httpError';
+import { insertWithClientId } from '@/lib/ids';
 
 export interface CreateTemplateInput {
   name: string;
+  /** Client-generated so the optimistic row is the real row; see lib/ids.ts. */
+  id?: string;
 }
 
 export interface CreateTemplateTaskInput {
+  /** Client-generated so the optimistic row is the real row; see lib/ids.ts. */
+  id?: string;
   title: string;
   description?: string;
   parentId?: string;
@@ -32,74 +38,74 @@ function siblingCondition(templateId: string, parentId: string | null) {
     : and(eq(templateTasks.templateId, templateId), eq(templateTasks.parentId, parentId));
 }
 
-async function countTemplateTasks(db: Db, templateId: string): Promise<number> {
-  const row = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(templateTasks)
-    .where(eq(templateTasks.templateId, templateId))
-    .get();
-  return row?.count ?? 0;
-}
-
 export async function getTemplates(db: Db, userId: string) {
-  const ownedRows = await db
-    .select()
-    .from(taskTemplates)
-    .where(eq(taskTemplates.ownerId, userId))
-    .orderBy(asc(taskTemplates.createdAt))
-    .all();
+  // One round trip. This used to issue a count query per template — an N+1
+  // that grew with the number of templates the caller could see.
+  const [ownedRows, sharedRows, countRows] = await db.batch([
+    db.select().from(taskTemplates).where(eq(taskTemplates.ownerId, userId)).orderBy(asc(taskTemplates.createdAt)),
+    db
+      .select({ template: taskTemplates, permission: templateShares.permission })
+      .from(taskTemplates)
+      .innerJoin(templateShares, and(eq(templateShares.templateId, taskTemplates.id), eq(templateShares.userId, userId)))
+      .orderBy(asc(taskTemplates.createdAt)),
+    db
+      .select({ templateId: templateTasks.templateId, count: sql<number>`count(*)` })
+      .from(templateTasks)
+      .where(
+        sql`${templateTasks.templateId} in (
+          select ${taskTemplates.id} from ${taskTemplates} where ${taskTemplates.ownerId} = ${userId}
+          union
+          select ${templateShares.templateId} from ${templateShares} where ${templateShares.userId} = ${userId}
+        )`,
+      )
+      .groupBy(templateTasks.templateId),
+  ]);
 
-  const owned = await Promise.all(
-    ownedRows.map(async (t) => ({
-      ...t,
-      _count: { tasks: await countTemplateTasks(db, t.id) },
-      role: 'owner' as const,
-    })),
-  );
+  const counts = new Map(countRows.map((r) => [r.templateId, r.count]));
 
-  const sharedRows = await db
-    .select({ template: taskTemplates, permission: templateShares.permission })
-    .from(taskTemplates)
-    .innerJoin(
-      templateShares,
-      and(eq(templateShares.templateId, taskTemplates.id), eq(templateShares.userId, userId)),
-    )
-    .orderBy(asc(taskTemplates.createdAt))
-    .all();
+  const owned = ownedRows.map((t) => ({
+    ...t,
+    _count: { tasks: counts.get(t.id) ?? 0 },
+    role: 'owner' as const,
+  }));
 
-  const shared = await Promise.all(
-    sharedRows.map(async ({ template, permission }) => ({
-      ...template,
-      _count: { tasks: await countTemplateTasks(db, template.id) },
-      role: 'shared' as const,
-      permission: permission ?? 'READ',
-    })),
-  );
+  const shared = sharedRows.map(({ template, permission }) => ({
+    ...template,
+    _count: { tasks: counts.get(template.id) ?? 0 },
+    role: 'shared' as const,
+    permission: permission ?? 'READ',
+  }));
 
   return { owned, shared };
 }
 
 export async function createTemplate(db: Db, userId: string, input: CreateTemplateInput) {
-  return await db.insert(taskTemplates).values({ name: input.name, ownerId: userId }).returning().get();
+  return await insertWithClientId(
+    (id) =>
+      db
+        .insert(taskTemplates)
+        .values({ ...(id ? { id } : {}), name: input.name, ownerId: userId })
+        .returning()
+        .get(),
+    input.id,
+  );
 }
 
 export async function getTemplateWithAccess(db: Db, templateId: string, userId: string) {
-  const templateRow = await db.select().from(taskTemplates).where(eq(taskTemplates.id, templateId)).get();
+  const [templateRows, shareRows, allTasks] = await db.batch([
+    db.select().from(taskTemplates).where(eq(taskTemplates.id, templateId)),
+    db.select().from(templateShares).where(eq(templateShares.templateId, templateId)),
+    db.select().from(templateTasks).where(eq(templateTasks.templateId, templateId)).orderBy(asc(templateTasks.order)),
+  ]);
+
+  const templateRow = templateRows[0];
   if (!templateRow) httpError(404, 'Not found');
 
-  const shareRows = await db.select().from(templateShares).where(eq(templateShares.templateId, templateId)).all();
   const isOwner = templateRow.ownerId === userId;
   const myShare = shareRows.find((s) => s.userId === userId);
   if (!isOwner && !myShare) httpError(404, 'Not found');
 
   const permission: Permission | null = isOwner ? 'WRITE' : (myShare?.permission ?? null);
-
-  const allTasks = await db
-    .select()
-    .from(templateTasks)
-    .where(eq(templateTasks.templateId, templateId))
-    .orderBy(asc(templateTasks.order))
-    .all();
 
   const subtasksByParent = new Map<string, typeof allTasks>();
   for (const t of allTasks) {
@@ -183,11 +189,22 @@ export async function createTemplateTask(db: Db, templateId: string, userId: str
     .get();
   const order = (maxRow?.maxOrder ?? -1) + 1;
 
-  return await db
-    .insert(templateTasks)
-    .values({ title: input.title, description: input.description, order, templateId, parentId: effectiveParentId })
-    .returning()
-    .get();
+  return await insertWithClientId(
+    (id) =>
+      db
+        .insert(templateTasks)
+        .values({
+          ...(id ? { id } : {}),
+          title: input.title,
+          description: input.description,
+          order,
+          templateId,
+          parentId: effectiveParentId,
+        })
+        .returning()
+        .get(),
+    input.id,
+  );
 }
 
 export async function updateTemplateTask(
@@ -348,49 +365,42 @@ export async function reorderTemplateTasks(
 }
 
 export async function applyTemplate(db: Db, templateId: string, taskListId: string, requestingUserId: string) {
-  const templateRow = await db.select().from(taskTemplates).where(eq(taskTemplates.id, templateId)).get();
-  const isTemplateOwner = !!templateRow && templateRow.ownerId === requestingUserId;
+  // Round trip 1: both access checks, the template's tasks, and where to start
+  // ordering — none of them depend on each other.
+  const [templateRows, templateShareRows, templateTaskRows, listRows, listShareRows, maxRows] = await db.batch([
+    db.select().from(taskTemplates).where(eq(taskTemplates.id, templateId)),
+    db
+      .select()
+      .from(templateShares)
+      .where(and(eq(templateShares.templateId, templateId), eq(templateShares.userId, requestingUserId))),
+    db.select().from(templateTasks).where(eq(templateTasks.templateId, templateId)).orderBy(asc(templateTasks.order)),
+    db.select().from(taskLists).where(eq(taskLists.id, taskListId)),
+    db
+      .select()
+      .from(taskListShares)
+      .where(
+        and(
+          eq(taskListShares.taskListId, taskListId),
+          eq(taskListShares.userId, requestingUserId),
+          eq(taskListShares.permission, 'WRITE'),
+        ),
+      ),
+    db
+      .select({ maxOrder: sql<number | null>`max(${tasks.order})` })
+      .from(tasks)
+      .where(and(eq(tasks.taskListId, taskListId), isNull(tasks.parentId))),
+  ]);
+
+  const templateRow = templateRows[0];
   const hasTemplateAccess =
-    isTemplateOwner ||
-    (!!templateRow &&
-      !!(await db
-        .select()
-        .from(templateShares)
-        .where(and(eq(templateShares.templateId, templateId), eq(templateShares.userId, requestingUserId)))
-        .get()));
-  if (!templateRow || !hasTemplateAccess) httpError(404, 'Template not found');
+    !!templateRow && (templateRow.ownerId === requestingUserId || templateShareRows.length > 0);
+  if (!hasTemplateAccess) httpError(404, 'Template not found');
 
-  const templateTaskRows = await db
-    .select()
-    .from(templateTasks)
-    .where(eq(templateTasks.templateId, templateId))
-    .orderBy(asc(templateTasks.order))
-    .all();
+  const listRow = listRows[0];
+  const hasListWriteAccess = !!listRow && (listRow.ownerId === requestingUserId || listShareRows.length > 0);
+  if (!hasListWriteAccess) httpError(403, 'No write access to task list');
 
-  // Check write access on target list
-  const listRow = await db.select().from(taskLists).where(eq(taskLists.id, taskListId)).get();
-  const hasListWriteAccess =
-    !!listRow &&
-    (listRow.ownerId === requestingUserId ||
-      !!(await db
-        .select()
-        .from(taskListShares)
-        .where(
-          and(
-            eq(taskListShares.taskListId, taskListId),
-            eq(taskListShares.userId, requestingUserId),
-            eq(taskListShares.permission, 'WRITE'),
-          ),
-        )
-        .get()));
-  if (!listRow || !hasListWriteAccess) httpError(403, 'No write access to task list');
-
-  const maxRow = await db
-    .select({ maxOrder: sql<number | null>`max(${tasks.order})` })
-    .from(tasks)
-    .where(and(eq(tasks.taskListId, taskListId), isNull(tasks.parentId)))
-    .get();
-  const baseOrder = (maxRow?.maxOrder ?? -1) + 1;
+  const baseOrder = (maxRows[0]?.maxOrder ?? -1) + 1;
 
   // Separate parents and subtasks
   const parents = templateTaskRows.filter((tt) => tt.parentId === null);
@@ -401,37 +411,42 @@ export async function applyTemplate(db: Db, templateId: string, taskListId: stri
     subtasksByParent.set(tt.parentId!, arr);
   }
 
-  return await db.transaction(async (tx) => {
-    const results: (typeof tasks.$inferSelect)[] = [];
-    const templateIdToTaskId = new Map<string, string>();
+  if (parents.length === 0) return [];
 
-    // Create parent tasks
-    for (let i = 0; i < parents.length; i++) {
-      const tt = parents[i];
-      const task = await tx
-        .insert(tasks)
-        .values({ title: tt.title, description: tt.description, order: baseOrder + i, taskListId, parentId: null })
-        .returning()
-        .get();
-      templateIdToTaskId.set(tt.id, task.id);
-      results.push(task);
-    }
+  // Round trip 2. Generating the ids here instead of reading them back from
+  // each insert is what collapses this from one round trip per task to one
+  // multi-row insert; parents are listed first so the foreign key on
+  // parent_id is satisfied row by row.
+  const rows: (typeof tasks.$inferInsert)[] = [];
+  const templateIdToTaskId = new Map<string, string>();
 
-    // Create subtasks
-    for (const [templateParentId, subtasks] of subtasksByParent) {
-      const newParentId = templateIdToTaskId.get(templateParentId);
-      if (!newParentId) continue;
-      for (let j = 0; j < subtasks.length; j++) {
-        const st = subtasks[j];
-        const task = await tx
-          .insert(tasks)
-          .values({ title: st.title, description: st.description, order: j, taskListId, parentId: newParentId })
-          .returning()
-          .get();
-        results.push(task);
-      }
-    }
-
-    return results;
+  parents.forEach((tt, i) => {
+    const id = createId();
+    templateIdToTaskId.set(tt.id, id);
+    rows.push({
+      id,
+      title: tt.title,
+      description: tt.description,
+      order: baseOrder + i,
+      taskListId,
+      parentId: null,
+    });
   });
+
+  for (const [templateParentId, subtasks] of subtasksByParent) {
+    const newParentId = templateIdToTaskId.get(templateParentId);
+    if (!newParentId) continue;
+    subtasks.forEach((st, j) => {
+      rows.push({
+        id: createId(),
+        title: st.title,
+        description: st.description,
+        order: j,
+        taskListId,
+        parentId: newParentId,
+      });
+    });
+  }
+
+  return await db.insert(tasks).values(rows).returning().all();
 }

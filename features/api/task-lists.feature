@@ -53,3 +53,30 @@ Feature: Task Lists API
     And I share that task list with "bob@example.com" as WRITE
     When user "bob@example.com" DELETEs that task list
     Then the status is 403
+
+  Scenario: The version token changes when a task is added
+    Given I own a task list named "Versioned List"
+    And I note the version of that task list
+    When I have a task "New Task" in that list
+    Then the version of that task list has changed
+
+  Scenario: The version token changes when a share permission changes
+    Given I own a task list named "Versioned List"
+    And I share that task list with "bob@example.com" as READ
+    And I note the version of that task list
+    When I PATCH that share with permission "WRITE"
+    Then the version of that task list has changed
+
+  Scenario: The version token changes when a share is revoked
+    Given I own a task list named "Versioned List"
+    And I share that task list with "bob@example.com" as READ
+    And I note the version of that task list
+    When I DELETE that share
+    Then the version of that task list has changed
+
+  Scenario: A former collaborator cannot read the version
+    Given I own a task list named "Versioned List"
+    And I share that task list with "bob@example.com" as READ
+    And I have revoked that share
+    When user "bob@example.com" GETs the version of that task list
+    Then the status is 404
