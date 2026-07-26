@@ -142,6 +142,41 @@ When('I reopen the app', async ({ page }) => {
 });
 
 /**
+ * Returning to an app that never stopped running. The session query holds its
+ * answer for five minutes, so going past that and refocusing the tab is what
+ * actually provokes a recheck — the same thing a backgrounded phone does, and
+ * the only way to reach the recheck path without reloading and losing the
+ * cached user this asserts on.
+ */
+When('I come back to the app after a while', async ({ page }) => {
+  let attempts = 0;
+  page.on('request', (request) => {
+    if (request.url().includes('/api/auth/me')) attempts += 1;
+  });
+
+  await page.clock.install();
+  await page.clock.fastForward('06:00');
+  await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+
+  // Wait for the recheck to stop before letting the scenario assert, or the
+  // assertion describes the moment before the app reacted and passes for the
+  // wrong reason. Two equal readings taken further apart than the retry
+  // backoff (1s, then 2s) mean it has run out of attempts; insisting on at
+  // least one also catches this step silently failing to provoke a recheck.
+  let previous = -1;
+  await expect
+    .poll(
+      () => {
+        const settled = attempts > 0 && attempts === previous;
+        previous = attempts;
+        return settled;
+      },
+      { intervals: [2500, 2500, 2500, 2500, 2500, 2500], timeout: 25_000 },
+    )
+    .toBe(true);
+});
+
+/**
  * The sidebar's account name comes from /api/auth/me, so it cannot appear
  * before the session was confirmed — and never appears at all if the app
  * redirected to the login screen. Asserting the URL instead would pass on the

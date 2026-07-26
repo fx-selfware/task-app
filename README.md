@@ -32,7 +32,7 @@ All functional requirements live as Gherkin scenarios in `features/` — they ar
 ```bash
 npm test              # everything: api + browser (chromium + mobile viewport)
 npm run test:api      # 92 API scenarios (fast, no browser)
-npm run test:e2e      # 39 browser scenarios, incl. mobile touch
+npm run test:e2e      # 41 browser scenarios, incl. mobile touch
 ```
 
 Two of those feature files are performance contracts rather than behaviour: `features/api/round-trips.feature` caps the database round trips each hot endpoint may issue, and `features/e2e/optimistic.feature` stalls the API before acting, so a passing assertion proves the UI updated without waiting for a response.

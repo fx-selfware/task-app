@@ -8,7 +8,7 @@ import { Button } from '@/components/Button';
 import { Spinner } from '@/components/Spinner';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isError, error, refetch, isFetching } = useMe();
+  const { data: user, isError, error, isPaused, errorUpdateCount, refetch, isFetching } = useMe();
   const router = useRouter();
 
   // Being signed out means the server looked at the token and refused it.
@@ -17,7 +17,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   // treating a stumble there as a logout sent people back to a login form that
   // their password was never the problem with.
   const signedOut = isError && isRefusal(error);
-  const unreachable = isError && !signedOut;
+
+  // Nothing to show the app with, and no answer coming. `errorUpdateCount`
+  // rather than `isError` because a manual retry clears the error the instant
+  // it starts, which would otherwise flash the app's shell with no account in
+  // it; `isPaused` because react-query parks a query offline instead of
+  // failing it, which would otherwise show that shell for as long as the
+  // connection stayed down. Once there is a user, neither matters: a recheck
+  // that fails later has no business tearing down a working screen.
+  const unconfirmed = !user && !signedOut && (isPaused || errorUpdateCount > 0);
 
   useEffect(() => {
     if (signedOut) router.replace('/login');
@@ -38,7 +46,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (unreachable) {
+  if (unconfirmed) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 p-4">
         <div className="w-full max-w-sm text-center">

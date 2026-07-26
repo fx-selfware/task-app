@@ -45,6 +45,24 @@ Feature: Authentication
     When I reopen the app
     Then I am redirected to "/login"
 
+  # Coming back to an app that is still running is the other half of this: the
+  # session gets rechecked once it goes stale, and a recheck that fails must not
+  # throw away a session — or a screen — that was working a moment ago.
+
+  @ac
+  Scenario: A session check that fails after the app has loaded leaves it alone
+    Given I am logged in as a new user
+    And the session check keeps failing
+    When I come back to the app after a while
+    Then I am still signed in
+
+  @ac
+  Scenario: A session refused when I come back still signs me out
+    Given I am logged in as a new user
+    And my session token has expired
+    When I come back to the app after a while
+    Then I am redirected to "/login"
+
   @ac
   Scenario: A server that cannot be reached offers a retry instead of a login screen
     Given I am logged in as a new user
