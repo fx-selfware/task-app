@@ -43,6 +43,8 @@ Feature: Templates API
     When I PATCH that template task with body '{"title":"Updated Task A"}'
     Then the status is 200
     And the template task has title "Updated Task A"
+    When I DELETE that template task
+    Then the status is 204
 
   # Same as the task endpoint: nothing to apply is a 400, not a database error.
   Scenario: A template task update with no fields is rejected rather than failing
@@ -51,8 +53,6 @@ Feature: Templates API
     And I PATCH that template task with body '{}'
     Then the status is 400
     And the response body has error "no fields to update"
-    When I DELETE that template task
-    Then the status is 204
 
   Scenario: Reorder template tasks
     Given I have a template named "My Template" with tasks "Task 1", "Task 2" and "Task 3"
