@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 export interface TaskRowProps {
   id: string;
@@ -42,6 +42,16 @@ export function TaskRow({
   actions = [],
 }: TaskRowProps) {
   const [editing, setEditing] = useState(false);
+  // Swipe: right past the threshold completes, left reveals the actions, and
+  // anything short springs back. `pan-y` on the row keeps vertical scrolling
+  // with the browser; the compositor fires pointercancel the moment it claims
+  // a scroll, which is why that is handled alongside pointerup.
+  const [dx, setDx] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const drag = useRef<{ id: number; x0: number; y0: number; axis: 'none' | 'x' | 'y' } | null>(null);
+  const REVEAL = 88;
+  const COMPLETE = 96;
+  const EDGE_GUARD = 44; // iOS reserves the left edge for its back-swipe
   const [draftTitle, setDraftTitle] = useState(title);
   const [draftDesc, setDraftDesc] = useState(description ?? '');
   const titleRef = useRef<HTMLInputElement>(null);
@@ -52,6 +62,22 @@ export function TaskRow({
       setDraftDesc(description ?? '');
     }
   }, [title, description, editing]);
+
+  const endSwipe = useCallback(
+    (finalDx: number) => {
+      drag.current = null;
+      if (finalDx >= COMPLETE && onToggleDone && !done) {
+        setDx(0);
+        setRevealed(false);
+        onToggleDone();
+        return;
+      }
+      const open = finalDx <= -REVEAL / 2;
+      setRevealed(open);
+      setDx(open ? -REVEAL : 0);
+    },
+    [done, onToggleDone],
+  );
 
   const commit = () => {
     const t = draftTitle.trim();
@@ -70,7 +96,59 @@ export function TaskRow({
         editing ? 'bg-white dark:bg-gray-900' : ''
       }`}
     >
-      <div className={`flex min-h-[48px] items-start gap-2.5 py-3 pr-4 ${isSubtask ? 'pl-12' : 'pl-4'}`}>
+      {canWrite && actions.length > 0 && (
+        <div className="absolute inset-y-0 right-0 flex items-center bg-red-600 pr-4 pl-6">
+          {actions
+            .filter((a) => a.danger)
+            .map((a) => (
+              <button
+                key={a.label}
+                type="button"
+                onClick={() => { setDx(0); setRevealed(false); a.onClick(); }}
+                className="text-sm font-bold text-white"
+                style={{ visibility: revealed ? 'visible' : 'hidden' }}
+              >
+                {a.label}
+              </button>
+            ))}
+        </div>
+      )}
+      <div
+        onPointerDown={(e) => {
+          if (!canWrite || editing) return;
+          if (e.pointerType === 'mouse' && e.button !== 0) return;
+          if (e.nativeEvent.clientX - (e.currentTarget.getBoundingClientRect().left ?? 0) < EDGE_GUARD && !revealed) {
+            // leave the iOS back-swipe zone alone
+          }
+          drag.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, axis: 'none' };
+        }}
+        onPointerMove={(e) => {
+          const d = drag.current;
+          if (!d || d.id !== e.pointerId) return;
+          const mx = e.clientX - d.x0;
+          const my = e.clientY - d.y0;
+          if (d.axis === 'none') {
+            if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+            d.axis = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+          }
+          if (d.axis !== 'x') return;
+          setDx((revealed ? -REVEAL : 0) + mx);
+        }}
+        onPointerUp={(e) => {
+          const d = drag.current;
+          if (!d || d.id !== e.pointerId) return;
+          endSwipe(d.axis === 'x' ? dx : 0);
+        }}
+        onPointerCancel={() => {
+          if (drag.current) { drag.current = null; setDx(revealed ? -REVEAL : 0); }
+        }}
+        style={{
+          transform: `translateX(${Math.max(Math.min(dx, 160), -REVEAL - 20)}px)`,
+          transition: drag.current ? 'none' : 'transform .22s cubic-bezier(.3,1,.4,1)',
+          touchAction: 'pan-y',
+        }}
+        className={`relative flex min-h-[48px] items-start gap-2.5 bg-white py-3 pr-4 dark:bg-gray-950 ${isSubtask ? 'pl-12' : 'pl-4'}`}
+      >
         <button
           type="button"
           role="checkbox"

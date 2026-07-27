@@ -36,3 +36,25 @@ Scenario: Row actions are reachable on a touch device without hovering
   Given I have a task list with tasks "Alpha" and "Beta" ready to view
   When I open the row "Alpha"
   Then the row actions are visible without hovering
+
+  # Direction A trades the row's visible controls for gestures. Each one still
+  # has a non-gesture route, so these prove the shortcut, not the only way in.
+  @touch-only
+  Scenario: Swiping a task right completes it
+    Given I have a task list with tasks "Alpha" and "Beta" ready to view
+    When I swipe "Alpha" right
+    Then the completed section shows 1 completed task
+    And "Alpha" is no longer visible in the task list
+
+  @touch-only
+  Scenario: Swiping a task left reveals its actions
+    Given I have a task list with tasks "Alpha" and "Beta" ready to view
+    When I swipe "Alpha" left
+    Then the row actions for "Alpha" are revealed
+
+  @touch-only
+  Scenario: A short swipe springs back and changes nothing
+    Given I have a task list with tasks "Alpha" and "Beta" ready to view
+    When I swipe "Alpha" left by 20 pixels
+    Then the row actions for "Alpha" are not revealed
+    And "Alpha" is visible in the task list

@@ -137,3 +137,47 @@ Then('clicking the composer area hits the backdrop instead', async ({ page }) =>
   // and the composer must not have taken focus through the backdrop
   await expect(composer).not.toBeFocused();
 });
+
+// --- gestures -------------------------------------------------------------
+// Driven through CDP so the browser's own gesture arbitration runs, the same
+// path a physical finger takes. Playwright's touchscreen API cannot drag.
+async function swipe(page: import('@playwright/test').Page, name: string, dx: number) {
+  const row = page.getByTestId('task-row').filter({ hasText: name }).first();
+  const box = await row.boundingBox();
+  const x = box!.x + box!.width * 0.5;
+  const y = box!.y + box!.height / 2;
+  const client = await page.context().newCDPSession(page);
+  await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] });
+  const steps = 12;
+  for (let i = 1; i <= steps; i++) {
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: x + (dx * i) / steps, y, id: 1 }],
+    });
+    await page.waitForTimeout(12);
+  }
+  await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await client.detach();
+}
+
+When('I swipe {string} right', async ({ page }, name: string) => {
+  await swipe(page, name, 140);
+});
+
+When('I swipe {string} left', async ({ page }, name: string) => {
+  await swipe(page, name, -140);
+});
+
+When('I swipe {string} left by {int} pixels', async ({ page }, name: string, px: number) => {
+  await swipe(page, name, -px);
+});
+
+Then('the row actions for {string} are revealed', async ({ page }, name: string) => {
+  const row = page.getByTestId('task-row').filter({ hasText: name }).first();
+  await expect(row.getByRole('button', { name: 'Delete', exact: true })).toBeVisible({ timeout: 3000 });
+});
+
+Then('the row actions for {string} are not revealed', async ({ page }, name: string) => {
+  const row = page.getByTestId('task-row').filter({ hasText: name }).first();
+  await expect(row.getByRole('button', { name: 'Delete', exact: true })).not.toBeVisible({ timeout: 2000 });
+});
