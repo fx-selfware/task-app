@@ -109,8 +109,8 @@ Then('the list heading is {string}', async ({ page }, name: string) => {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(name, { timeout: 5000 });
 });
 
-Then('no dialog is open', async ({ page }) => {
-  await expect(page.getByRole('dialog')).toBeHidden({ timeout: 5000 });
+Then('no task is being edited', async ({ page }) => {
+  await expect(page.getByLabel('Task title')).not.toBeVisible({ timeout: 3000 });
 });
 
 Then('an error message is visible', async ({ page }) => {

@@ -28,11 +28,11 @@ Feature: Optimistic updates
     When I submit a rename of the list to "Renamed List"
     Then the list heading is "Renamed List"
 
-  Scenario: The edit dialog closes before the server responds
+  Scenario: The row leaves edit mode before the server responds
     Given I have a task named "Editable Task"
     And the API stops responding
     When I submit an edit of the task "Editable Task" titled "Edited Task"
-    Then no dialog is open
+    Then no task is being edited
     And "Edited Task" is visible in the task list
 
   Scenario: A moved subtask reparents before the server responds

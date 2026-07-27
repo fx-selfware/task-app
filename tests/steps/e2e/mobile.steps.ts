@@ -18,28 +18,32 @@ Given(
 );
 
 When(
-  'I press "Add task" and type {string} then press Enter',
+  'I type {string} in the composer then press Enter',
   async ({ page }, title: string) => {
-    await page.getByRole('button', { name: 'Add task' }).click();
-    const titleInput = page.getByLabel('Title');
-    await titleInput.fill(title);
-    await titleInput.press('Enter');
-    await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5000 });
+    const composer = page.getByLabel('Add a task');
+    await composer.fill(title);
+    await composer.press('Enter');
   },
 );
 
-Then('the task actions button is visible without hovering', async ({ page }) => {
-  const actionsButton = page.getByRole('button', { name: 'Task actions' }).first();
-  await expect(actionsButton).toBeVisible({ timeout: 3000 });
+When('I open the row {string}', async ({ page }, name: string) => {
+  await page.getByTestId('task-title').filter({ hasText: name }).first().click();
+});
+
+Then('the row actions are visible without hovering', async ({ page }) => {
+  // No hover anywhere in this step: the actions must already be on screen.
+  await expect(page.getByRole('button', { name: 'Add subtask' })).toBeVisible({ timeout: 3000 });
+  await expect(page.getByRole('button', { name: 'Delete', exact: true })).toBeVisible({ timeout: 3000 });
 });
 
 When('I drag {string} above {string}', async ({ page }, item: string, target: string) => {
-  const titles = await page.locator('.group p.font-medium').allTextContents();
+  const titles = await page.getByTestId('task-title').allTextContents();
   const itemIdx = titles.findIndex((t) => t.trim() === item);
   const targetIdx = titles.findIndex((t) => t.trim() === target);
 
-  const sourceHandle = page.getByRole('button', { name: 'Drag to reorder' }).nth(itemIdx);
-  const targetCard = page.locator('.group').nth(targetIdx);
+  // There is no grip any more — the whole row is the handle.
+  const sourceHandle = page.getByTestId('task-row').nth(itemIdx);
+  const targetCard = page.getByTestId('task-row').nth(targetIdx);
 
   const sourceBB = await sourceHandle.boundingBox();
   const targetBB = await targetCard.boundingBox();
@@ -87,7 +91,7 @@ Then(
   '{string} appears before {string} in the task list',
   async ({ page }, first: string, second: string) => {
     await expect(async () => {
-      const titles = await page.locator('.group p.font-medium').allTextContents();
+      const titles = await page.getByTestId('task-title').allTextContents();
       const firstIdx = titles.findIndex((t) => t.trim() === first);
       const secondIdx = titles.findIndex((t) => t.trim() === second);
       expect(firstIdx).toBeGreaterThanOrEqual(0);
@@ -121,14 +125,13 @@ When('I click the backdrop', async ({ page }) => {
   await page.click('.bg-black\\/50', { force: true });
 });
 
-Then('clicking the floating add button area hits the backdrop instead', async ({ page }) => {
-  const fab = page.locator('[aria-label="Add task"]');
-  const box = await fab.boundingBox();
+Then('clicking the composer area hits the backdrop instead', async ({ page }) => {
+  const composer = page.getByLabel('Add a task');
+  const box = await composer.boundingBox();
   expect(box).toBeTruthy();
-  // Click at the FAB's coordinates — if the backdrop has a higher z-index it catches the click
+  // Click at the composer's coordinates — if the backdrop is above it, it catches the click
   await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
-  // The backdrop click should close the sidebar
   await expect(page.getByTestId('sidebar')).not.toBeInViewport({ timeout: 3000 });
-  // No add-task dialog should have appeared
-  await expect(page.getByRole('dialog')).not.toBeVisible();
+  // and the composer must not have taken focus through the backdrop
+  await expect(composer).not.toBeFocused();
 });
