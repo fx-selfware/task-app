@@ -40,9 +40,7 @@ Feature: Task Lists
     And I check the checkbox for "Task B"
     And I expand the completed section
     Then "Task A" appears with strikethrough styling
-    When I click "List actions"
-    And I click the menu item "Delete completed"
-    And I confirm the deletion
+    When I clear the completed tasks
     Then the completed section is not visible
 
   Scenario: Shared list updates in real-time when another user adds a task

@@ -38,9 +38,10 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { NameFormModal, TaskFormModal } from '@/components/TaskFormModal';
 import { Spinner } from '@/components/Spinner';
 import { TemplateSharesModal } from '@/components/TemplateSharesModal';
-import { FloatingAddButton } from '@/components/FloatingAddButton';
 import { OverflowMenu } from '@/components/OverflowMenu';
-import { SortableParentCard, SortableSubtaskCard, SubtaskDndList } from '@/components/SortableCards';
+import { Composer } from '@/components/Composer';
+import { TaskRow } from '@/components/TaskRow';
+import { SortableTaskRow } from '@/components/SortableTaskRow';
 import { MoveTaskModal } from '@/components/MoveTaskModal';
 import { useToggleSet } from '@/hooks/useToggleSet';
 import type { TemplateTask } from '@/types';
@@ -68,6 +69,7 @@ export default function TemplateDetailPage() {
 
   const [showRename, setShowRename] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [subtaskParent, setSubtaskParent] = useState<TemplateTask | null>(null);
   const [addSubtaskParentId, setAddSubtaskParentId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TemplateTask | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TemplateTask | null>(null);
@@ -225,51 +227,41 @@ export default function TemplateDetailPage() {
                 const hasSubtasks = subtasks.length > 0;
                 const collapsed = collapsedParents.has(task.id);
 
-                const parentMenu: MenuItem[] = [
-                  { label: 'Add subtask', onClick: () => openAddSubtask(task.id) },
-                  ...(!hasSubtasks
-                    ? [{ label: 'Move under...', onClick: () => setMoveTarget(task) }]
+                const rowActions = (t: TemplateTask, isSub: boolean) => [
+                  ...(!isSub ? [{ label: 'Add subtask', onClick: () => setSubtaskParent(t) }] : []),
+                  { label: 'Move under...', onClick: () => setMoveTarget(t) },
+                  ...(isSub
+                    ? [{ label: 'Move to top level', onClick: () => moveTemplateTask.mutate({ taskId: t.id, parentId: null }) }]
                     : []),
-                  { label: 'Delete', onClick: () => setDeleteTarget(task), variant: 'danger' as const },
+                  { label: 'Delete', onClick: () => setDeleteTarget(t), danger: true },
                 ];
 
                 return (
                   <div key={task.id}>
-                    <SortableParentCard
+                    <SortableTaskRow
                       id={task.id}
                       title={task.title}
                       description={task.description}
                       canWrite={canWrite}
-                      hasSubtasks={hasSubtasks}
+                      subtaskCount={subtasks.length || undefined}
                       collapsed={collapsed}
                       onToggleCollapse={() => toggleCollapse(task.id)}
-                      onEdit={() => openEdit(task)}
-                      menuItems={parentMenu}
+                      onSave={(v) => updateTask.mutate({ taskId: task.id, data: { title: v.title, description: v.description ?? '' } })}
+                      actions={rowActions(task, false)}
                     />
-                    {hasSubtasks && !collapsed && !activeDragId && (
-                      <div className="ml-8 mt-1 space-y-1">
-                        <SubtaskDndList
-                          items={subtasks}
-                          sensors={sensors}
-                          onReorder={(ids) => reorderTasks.mutate({ orderedIds: ids, parentId: task.id })}
-                          renderItem={(sub) => (
-                            <SortableSubtaskCard
-                              key={sub.id}
-                              id={sub.id}
-                              title={sub.title}
-                              description={sub.description}
-                              canWrite={canWrite}
-                              onEdit={() => openEdit(sub)}
-                              menuItems={[
-                                { label: 'Move under...', onClick: () => setMoveTarget(sub) },
-                                { label: 'Move to top level', onClick: () => moveTemplateTask.mutate({ taskId: sub.id, parentId: null }) },
-                                { label: 'Delete', onClick: () => setDeleteTarget(sub), variant: 'danger' as const },
-                              ]}
-                            />
-                          )}
+                    {hasSubtasks && !collapsed &&
+                      subtasks.map((sub) => (
+                        <TaskRow
+                          key={sub.id}
+                          id={sub.id}
+                          title={sub.title}
+                          description={sub.description}
+                          isSubtask
+                          canWrite={canWrite}
+                          onSave={(v) => updateTask.mutate({ taskId: sub.id, data: { title: v.title, description: v.description ?? '' } })}
+                          actions={rowActions(sub, true)}
                         />
-                      </div>
-                    )}
+                      ))}
                   </div>
                 );
               })}
@@ -395,7 +387,21 @@ export default function TemplateDetailPage() {
         templateId={id!}
       />
 
-      {canWrite && <FloatingAddButton onClick={openAddTask} />}
+      {canWrite && (
+        <Composer
+          label={subtaskParent ? `Add a subtask to "${subtaskParent.title}"` : 'Add a task'}
+          withDescription
+          onSubmit={({ title, description }) => {
+            createTask.mutate({
+              id: createId(),
+              title,
+              description,
+              ...(subtaskParent && { parentId: subtaskParent.id }),
+            });
+            setSubtaskParent(null);
+          }}
+        />
+      )}
     </div>
   );
 }

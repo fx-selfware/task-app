@@ -108,6 +108,15 @@ When('I click {string}', async ({ page }, label: string) => {
   await page.getByRole('button', { name: label }).click();
 });
 
+When('I clear the completed tasks', async ({ page }) => {
+  // Clear lives on the completed group's own header, and confirms in place.
+  const group = page.getByTestId('completed-group');
+  const show = group.getByRole('button', { name: 'Show' });
+  if (await show.isVisible()) await show.click();
+  await group.getByRole('button', { name: 'Clear' }).click();
+  await group.getByRole('button', { name: 'Delete', exact: true }).click();
+});
+
 Then('{string} appears with strikethrough styling', async ({ page }, name: string) => {
   const taskTitle = page.getByTestId('task-title').filter({ hasText: name }).first();
   await expect(taskTitle).toHaveClass(/line-through/, { timeout: 5000 });
@@ -180,27 +189,33 @@ When('I select {string} in the move modal', async ({ page }, parentName: string)
 });
 
 Then('{string} is a top-level task after {string}', async ({ page }, name: string, afterName: string) => {
-  // Poll until the promoted task appears as a top-level task — a fixed sleep
-  // is not enough when the refetch crosses a real network (remote DB).
   await expect(async () => {
-    const cards = page.locator('.space-y-2').first().locator('> div');
-    const allTexts = await cards.allTextContents();
-    const beforeIdx = allTexts.findIndex((t) => t.includes(afterName));
-    const afterIdx = allTexts.findIndex((t) => t.includes(name));
+    const rows = await page.getByTestId('task-row').all();
+    const titles = await Promise.all(rows.map((r) => r.getAttribute('data-task-title')));
+    const subs = await Promise.all(rows.map((r) => r.getAttribute('data-subtask')));
+    const beforeIdx = titles.findIndex((t) => t === afterName);
+    const afterIdx = titles.findIndex((t) => t === name);
     expect(beforeIdx).toBeGreaterThanOrEqual(0);
     expect(afterIdx).toBeGreaterThan(beforeIdx);
+    expect(subs[afterIdx]).toBeNull();   // top-level, not nested
   }).toPass({ timeout: 10_000 });
 });
 
-Then('{string} is visible as a subtask of {string}', async ({ page }, subName: string, parentName: string) => {
-  // Find the top-level task wrapper that contains the parent, then verify the subtask is inside it
-  const parentWrapper = page.locator('.space-y-2 > div').filter({ hasText: parentName }).first();
-  await expect(parentWrapper.locator('.ml-8').getByText(subName)).toBeVisible({ timeout: 5000 });
+Then('{string} is visible as a subtask of {string}', async ({ page }, name: string, parentName: string) => {
+  await expect(async () => {
+    const rows = await page.getByTestId('task-row').all();
+    const titles = await Promise.all(rows.map((r) => r.getAttribute('data-task-title')));
+    const subs = await Promise.all(rows.map((r) => r.getAttribute('data-subtask')));
+    const parentIdx = titles.findIndex((t) => t === parentName);
+    const childIdx = titles.findIndex((t) => t === name);
+    expect(parentIdx).toBeGreaterThanOrEqual(0);
+    expect(childIdx).toBeGreaterThan(parentIdx);
+    expect(subs[childIdx]).toBe('true');
+  }).toPass({ timeout: 10_000 });
 });
 
 When('I start dragging {string}', async ({ page }, name: string) => {
-  const parentCard = page.locator('.space-y-2 > div').filter({ hasText: name }).first();
-  const dragHandle = parentCard.getByRole('button', { name: 'Drag to reorder' }).first();
+  const dragHandle = page.getByTestId('task-row').filter({ hasText: name }).first();
   await dragHandle.scrollIntoViewIfNeeded();
   await dragHandle.waitFor({ state: 'visible' });
   const box = await dragHandle.boundingBox();

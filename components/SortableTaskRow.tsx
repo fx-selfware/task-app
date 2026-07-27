@@ -30,6 +30,7 @@ export function SortableTaskRow({ id, ...props }: TaskRowProps) {
         touchAction: 'pan-y',
       }}
       {...attributes}
+      aria-label={`Reorder "${props.title}"`}
       {...listeners}
     >
       <TaskRow id={id} {...props} />

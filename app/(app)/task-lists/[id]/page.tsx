@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { createId } from '@paralleldrive/cuid2';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -12,6 +12,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -64,6 +65,23 @@ export default function TaskListDetailPage() {
   const [moveTarget, setMoveTarget] = useState<Task | null>(null);
   // When set, the composer is aimed at this parent instead of the list root.
   const [subtaskParent, setSubtaskParent] = useState<Task | null>(null);
+  // Subtasks are hidden while their parent is in flight, so the row being
+  // dragged keeps a stable height and the drop target doesn't jump.
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  // Hiding the subtasks shortens the list above the dragged row, so the row
+  // moves out from under the finger. Measure the shift after the DOM commits
+  // but before paint, and give it back to the overlay.
+  const preCollapseTopRef = useRef(0);
+  const [dragYOffset, setDragYOffset] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!activeDragId) {
+      setDragYOffset(0);
+      return;
+    }
+    const el = document.querySelector(`[data-sortable-id="${activeDragId}"]`);
+    if (el) setDragYOffset(preCollapseTopRef.current - el.getBoundingClientRect().top);
+  }, [activeDragId]);
 
   const tasks = useMemo(() => data?.list?.tasks ?? [], [data]);
 
@@ -161,7 +179,17 @@ export default function TaskListDetailPage() {
             {canWrite ? 'Nothing here yet. Add a task below.' : 'No tasks in this list.'}
           </p>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={(e) => {
+              const el = document.querySelector(`[data-sortable-id="${e.active.id}"]`);
+              preCollapseTopRef.current = el?.getBoundingClientRect().top ?? 0;
+              setActiveDragId(e.active.id as string);
+            }}
+            onDragCancel={() => setActiveDragId(null)}
+            onDragEnd={(e) => { setActiveDragId(null); handleDragEnd(e); }}
+          >
             <SortableContext items={todoTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div>
                 {todoTasks.map((task) => {
@@ -181,7 +209,7 @@ export default function TaskListDetailPage() {
                         onSave={(v) => updateTask.mutate({ taskId: task.id, data: v })}
                         actions={rowActions(task, false)}
                       />
-                      {!collapsed &&
+                      {!collapsed && !activeDragId &&
                         todoSubs.map((sub) => (
                           <TaskRow
                             key={sub.id}
@@ -200,6 +228,22 @@ export default function TaskListDetailPage() {
                 })}
               </div>
             </SortableContext>
+            <DragOverlay>
+              {activeDragId
+                ? (() => {
+                    const t = todoTasks.find((x) => x.id === activeDragId);
+                    return t ? (
+                      <div
+                        data-testid="drag-overlay"
+                        style={dragYOffset ? { transform: `translateY(${dragYOffset}px)` } : undefined}
+                        className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-gray-700 dark:bg-gray-900"
+                      >
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{t.title}</p>
+                      </div>
+                    ) : null;
+                  })()
+                : null}
+            </DragOverlay>
           </DndContext>
         )}
 

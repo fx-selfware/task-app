@@ -130,7 +130,9 @@ Then('clicking the composer area hits the backdrop instead', async ({ page }) =>
   const box = await composer.boundingBox();
   expect(box).toBeTruthy();
   // Click at the composer's coordinates — if the backdrop is above it, it catches the click
-  await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  // The drawer itself is 256px wide, so the composer's centre is behind it.
+  // Aim right of the drawer, where only the backdrop can be in the way.
+  await page.mouse.click(box!.x + box!.width - 20, box!.y + box!.height / 2);
   await expect(page.getByTestId('sidebar')).not.toBeInViewport({ timeout: 3000 });
   // and the composer must not have taken focus through the backdrop
   await expect(composer).not.toBeFocused();

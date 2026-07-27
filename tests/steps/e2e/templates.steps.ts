@@ -64,24 +64,18 @@ Then(
 );
 
 When('I add a template task named {string}', async ({ page }, name: string) => {
-  await page.getByRole('button', { name: 'Add task' }).click();
-  await page.getByLabel('Title').fill(name);
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });
+  const composer = page.getByLabel('Add a task');
+  await composer.fill(name);
+  await composer.press('Enter');
+  await expect(page.getByTestId('task-title').filter({ hasText: name })).toBeVisible({ timeout: 5000 });
 });
 
 When(
   'I drag the template task {string} above {string}',
   async ({ page }, source: string, target: string) => {
-    const sourceHandle = page
-      .locator('.space-y-2 > div')
-      .filter({ hasText: source })
-      .first()
-      .getByRole('button', { name: 'Drag to reorder' });
-    const targetCard = page
-      .locator('.space-y-2 > div')
-      .filter({ hasText: target })
-      .first();
+    // The row is the handle now — there is no grip to grab.
+    const sourceHandle = page.getByTestId('task-row').filter({ hasText: source }).first();
+    const targetCard = page.getByTestId('task-row').filter({ hasText: target }).first();
 
     await sourceHandle.dragTo(targetCard);
   },
@@ -91,8 +85,9 @@ Then(
   '{string} appears before {string} in the template',
   async ({ page }, first: string, second: string) => {
     await page.waitForTimeout(1000);
-    const taskTitles = page.locator('.space-y-2 > div .font-medium');
-    const texts = await taskTitles.allTextContents();
+    const texts = await page.getByTestId('task-row').evaluateAll((rows) =>
+      rows.map((r) => r.getAttribute('data-task-title') ?? ''),
+    );
     const firstIndex = texts.indexOf(first);
     const secondIndex = texts.indexOf(second);
     expect(firstIndex).toBeGreaterThanOrEqual(0);

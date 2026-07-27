@@ -65,6 +65,7 @@ export function TaskRow({
     <div
       data-testid="task-row"
       data-task-title={title}
+      data-subtask={isSubtask ? 'true' : undefined}
       className={`relative border-t border-gray-200 first:border-t-0 dark:border-gray-800 ${
         editing ? 'bg-white dark:bg-gray-900' : ''
       }`}
