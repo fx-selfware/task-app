@@ -65,6 +65,8 @@ One BDD toolchain (playwright-bdd), two layers, all features in `features/`:
 
 **Acceptance criteria** are `@ac`-tagged scenarios in `features/e2e/` — the scenario name *is* the AC. `grep -A1 "@ac" features/e2e/*.feature` to list them. Feature files are the spec: fix code, never bend a feature file to make a test pass.
 
+**Only the main flow of a feature gets `@ac`** — one scenario per feature file, the one that describes the feature working as intended end to end. Everything else (edge cases, negative cases, regressions, resilience, layout details) stays untagged unless the user explicitly asks for that scenario to be an AC; then tag it too. New scenarios default to untagged. The tag marks nothing else — every scenario runs either way — so an `@ac` list that grew to cover most of the suite says nothing about what the feature *is*, which is the whole point of the tag.
+
 **Round-trip budgets** live in `features/api/round-trips.feature`: each hot endpoint asserts a maximum number of database round trips, seeded with 20 rows so an N+1 fails rather than merely being slower.
 
 **Session resilience** is specified at the end of `features/e2e/auth.feature`: those scenarios interfere with `/api/auth/me` alone and assert on the sidebar's account name, which is rendered from `/me` and so can't appear unless the session was actually confirmed — asserting the URL instead passes on the frame before a client-side redirect fires. The step that forges an expired token needs the runner and the server to share `JWT_SECRET` (`playwright.config.ts`).

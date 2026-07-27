@@ -27,7 +27,7 @@ Local dev uses an embedded SQLite file (`TURSO_DATABASE_URL=file:./data/app.db`)
 
 ## Testing
 
-All functional requirements live as Gherkin scenarios in `features/` — they are the spec, and the `@ac`-tagged e2e scenarios are the acceptance criteria (`grep -A1 "@ac" features/e2e/*.feature`).
+All functional requirements live as Gherkin scenarios in `features/` — they are the spec, and the `@ac`-tagged e2e scenarios are the acceptance criteria (`grep -A1 "@ac" features/e2e/*.feature`). `@ac` marks the main flow of each feature — one scenario per feature file — so the tag reads as a summary of what the app does; edge cases and regressions are covered by the surrounding scenarios and run all the same.
 
 ```bash
 npm test              # everything: api + browser (chromium + mobile viewport)

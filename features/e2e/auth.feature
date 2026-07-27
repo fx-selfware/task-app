@@ -1,12 +1,10 @@
 Feature: Authentication
 
-  @ac
   Scenario: A visitor who is not logged in is redirected to the login page
     Given I am not logged in
     When I visit "/"
     Then I am redirected to "/login"
 
-  @ac
   Scenario: A new user can register and is taken to their task lists
     Given I am on the register page
     When I fill in name "E2E User", email "<unique>@example.com", password "password123"
@@ -31,14 +29,12 @@ Feature: Authentication
   # waking, a serverless function and a database both starting cold — and a
   # stumble there used to be indistinguishable from being signed out.
 
-  @ac
   Scenario: A stumble on the session check while the app opens does not sign me out
     Given I am logged in as a new user
     And the session check fails once before recovering
     When I reopen the app
     Then I am still signed in
 
-  @ac
   Scenario: A session the server rejects still sends me to the login screen
     Given I am logged in as a new user
     And my session token has expired
@@ -49,21 +45,18 @@ Feature: Authentication
   # session gets rechecked once it goes stale, and a recheck that fails must not
   # throw away a session — or a screen — that was working a moment ago.
 
-  @ac
   Scenario: A session check that fails after the app has loaded leaves it alone
     Given I am logged in as a new user
     And the session check keeps failing
     When I come back to the app after a while
     Then I am still signed in
 
-  @ac
   Scenario: A session refused when I come back still signs me out
     Given I am logged in as a new user
     And my session token has expired
     When I come back to the app after a while
     Then I am redirected to "/login"
 
-  @ac
   Scenario: A server that cannot be reached offers a retry instead of a login screen
     Given I am logged in as a new user
     And the session check keeps failing
@@ -71,7 +64,6 @@ Feature: Authentication
     Then I am told the app cannot reach the server
     And I am on the task lists page
 
-  @ac
   Scenario: Retrying once the server is back restores the app
     Given I am logged in as a new user
     And the session check keeps failing
@@ -87,14 +79,12 @@ Feature: Authentication
   # no account to show, and an account area drawn from nothing is an empty
   # circle above two empty lines — which reads as broken rather than as loading.
 
-  @ac
   Scenario: The account area shows a placeholder while the session is being confirmed
     Given I am logged in as a new user
     And the session check is slow to answer
     When I reopen the app
     Then the account area shows a placeholder
 
-  @ac
   Scenario: The account area gives way to my name once the session is confirmed
     Given I am logged in as a new user
     And the session check is slow to answer

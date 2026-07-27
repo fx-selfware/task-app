@@ -1,6 +1,5 @@
 Feature: Admin
 
-  @ac
   Scenario: A non-admin user does not see the Admin link in the sidebar
     Given I am logged in as a new user
     Then the sidebar does not have an "Admin" link
