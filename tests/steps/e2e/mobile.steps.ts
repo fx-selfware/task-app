@@ -105,38 +105,6 @@ Given('I am using a 375px wide viewport', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
 });
 
-Then('the sidebar is not visible', async ({ page }) => {
-  const sidebar = page.getByTestId('sidebar');
-  await expect(sidebar).not.toBeInViewport();
-});
-
-When('I click the hamburger button', async ({ page }) => {
-  const hamburger = page.getByTestId('hamburger');
-  await expect(hamburger).toBeVisible();
-  await hamburger.click();
-});
-
-Then('the sidebar is visible', async ({ page }) => {
-  const sidebar = page.getByTestId('sidebar');
-  await expect(sidebar).toBeInViewport();
-});
-
-When('I click the backdrop', async ({ page }) => {
-  await page.click('.bg-black\\/50', { force: true });
-});
-
-Then('clicking the composer area hits the backdrop instead', async ({ page }) => {
-  const composer = page.getByLabel('Add a task');
-  const box = await composer.boundingBox();
-  expect(box).toBeTruthy();
-  // Click at the composer's coordinates — if the backdrop is above it, it catches the click
-  // The drawer itself is 256px wide, so the composer's centre is behind it.
-  // Aim right of the drawer, where only the backdrop can be in the way.
-  await page.mouse.click(box!.x + box!.width - 20, box!.y + box!.height / 2);
-  await expect(page.getByTestId('sidebar')).not.toBeInViewport({ timeout: 3000 });
-  // and the composer must not have taken focus through the backdrop
-  await expect(composer).not.toBeFocused();
-});
 
 // --- gestures -------------------------------------------------------------
 // Driven through CDP so the browser's own gesture arbitration runs, the same

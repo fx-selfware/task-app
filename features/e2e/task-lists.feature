@@ -4,9 +4,9 @@ Feature: Task Lists
     Given I am logged in as a new user
 
   @ac
-  Scenario: A user can create a new task list and see it in the sidebar
+  Scenario: A user can create a new task list and see it in the lists tab
     When I create a task list named "Shopping"
-    Then "Shopping" appears in the sidebar
+    Then "Shopping" appears in the list of lists
 
   Scenario: A user can edit a task's title and description
     Given I have a task list named "My List"
@@ -153,5 +153,6 @@ Feature: Task Lists
     And I select "Parent B" in the move modal
     Then "Orphan Task" is visible as a subtask of "Parent B"
 
-  Scenario: The app displays a build version in the sidebar
-    Then the sidebar shows a real build hash
+  Scenario: The app displays a build version on the You tab
+    When I open the You tab
+    Then a real build hash is shown

@@ -6,8 +6,8 @@ const unique = () => `e2e_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
 /**
  * The name every "logged in as a new user" scenario registers under. Exported
- * because the sidebar renders it from /api/auth/me, which makes it the one
- * thing on screen that proves the session was actually confirmed.
+ * because the You tab's avatar is labelled from /api/auth/me, which makes it
+ * the one thing on screen that proves the session was actually confirmed.
  */
 export const NEW_USER_NAME = 'Test User';
 

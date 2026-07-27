@@ -10,7 +10,8 @@ Given('I have a task list named {string}', async ({ page }, name: string) => {
   const nameInput = page.getByLabel('List name');
   await nameInput.fill(name);
   await page.click('button[type="submit"]');
-  await expect(page.locator('nav').getByText(name, { exact: true })).toBeVisible({ timeout: 5000 });
+  await expect(page.locator(`[data-testid="list-link"][data-list-name="${name}"]`))
+    .toBeVisible({ timeout: 5000 });
 });
 
 When('I create a task list named {string}', async ({ page }, name: string) => {
@@ -20,8 +21,19 @@ When('I create a task list named {string}', async ({ page }, name: string) => {
   await page.click('button[type="submit"]');
 });
 
-Then('{string} appears in the sidebar', async ({ page }, name: string) => {
-  await expect(page.locator('nav').getByText(name, { exact: true })).toBeVisible({ timeout: 5000 });
+Then('{string} appears in the list of lists', async ({ page }, name: string) => {
+  // The link's accessible name includes its task count, so match the name itself.
+  await expect(page.locator(`[data-testid="list-link"][data-list-name="${name}"]`))
+    .toBeVisible({ timeout: 5000 });
+});
+
+When('I open the You tab', async ({ page }) => {
+  await page.getByTestId('you-tab').click();
+  await expect(page).toHaveURL(/\/you$/, { timeout: 5000 });
+});
+
+Then('a real build hash is shown', async ({ page }) => {
+  await expect(page.getByTestId('build-hash')).toHaveText(/^([0-9a-f]{7}|dev)$/, { timeout: 5000 });
 });
 
 When('I open the task list {string}', async ({ page }, name: string) => {
@@ -72,14 +84,16 @@ Given('a collaborator exists with email {string}', async ({ request }, email: st
 
 When('I invite {string} with {string} permission', async ({ page }, email: string, permission: string) => {
   await page.getByPlaceholder('Email address').fill(email);
-  await page.getByRole('dialog').locator('form select').selectOption(permission.toUpperCase());
+  // A two-way choice is a segmented control now, not a native picker.
+  await page.getByRole('radio', { name: permission === 'Write' ? 'Can edit' : 'Can view' }).click();
   await page.getByRole('button', { name: 'Invite' }).click();
 });
 
 Then('{string} is listed in the share modal with {string} access', async ({ page }, email: string, permission: string) => {
   const shareItem = page.locator('li').filter({ hasText: email });
   await expect(shareItem).toBeVisible({ timeout: 5000 });
-  await expect(shareItem.locator('select')).toHaveValue(permission.toUpperCase());
+  await expect(shareItem.getByRole('button', { name: `Access for ${email}` }))
+    .toHaveText(permission === 'Write' ? 'Can edit' : 'Can view', { timeout: 5000 });
 });
 
 When('I check the checkbox for {string}', async ({ page }, name: string) => {
@@ -120,11 +134,6 @@ When('I clear the completed tasks', async ({ page }) => {
 Then('{string} appears with strikethrough styling', async ({ page }, name: string) => {
   const taskTitle = page.getByTestId('task-title').filter({ hasText: name }).first();
   await expect(taskTitle).toHaveClass(/line-through/, { timeout: 5000 });
-});
-
-Then('the sidebar shows a real build hash', async ({ page }) => {
-  const sidebar = page.getByTestId('sidebar');
-  await expect(sidebar.getByText(/^build [0-9a-f]{7}$/)).toBeVisible({ timeout: 5000 });
 });
 
 When('I close the dialog', async ({ page }) => {

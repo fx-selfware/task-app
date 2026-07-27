@@ -133,7 +133,7 @@ function ListCard({
 }) {
   return (
     <div className="group relative rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-      <Link href={`/task-lists/${list.id}`} className="block">
+      <Link href={`/task-lists/${list.id}`} data-testid="list-link" data-list-name={list.name} className="block">
         <h3 className="font-semibold text-gray-900">{list.name}</h3>
         <p className="mt-1 text-sm text-gray-500">
           {list._count?.tasks ?? 0} task{(list._count?.tasks ?? 0) !== 1 ? 's' : ''}

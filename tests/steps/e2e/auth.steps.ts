@@ -58,7 +58,10 @@ Then('I am on the task lists page', async ({ page }) => {
 });
 
 When('I click the logout button', async ({ page }) => {
-  await page.click('button[title="Log out"]');
+  // Log out lives on the You tab now, as a labelled row rather than a bare
+  // icon with a title attribute — which was invisible on a touch device.
+  await page.getByTestId('you-tab').click();
+  await page.getByRole('button', { name: 'Log out' }).click();
 });
 
 When(
@@ -208,13 +211,13 @@ When('I come back to the app after a while', async ({ page }) => {
 });
 
 /**
- * The sidebar's account name comes from /api/auth/me, so it cannot appear
+ * The You tab's avatar is labelled from /api/auth/me, so it cannot appear
  * before the session was confirmed — and never appears at all if the app
  * redirected to the login screen. Asserting the URL instead would pass on the
  * frame before a client-side redirect fires.
  */
 Then('I am still signed in', async ({ page }) => {
-  await expect(page.getByText(NEW_USER_NAME)).toBeVisible();
+  await expect(page.getByLabel(NEW_USER_NAME)).toBeVisible();
   await expect(page).toHaveURL(/\/task-lists/);
 });
 

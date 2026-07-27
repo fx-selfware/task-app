@@ -48,7 +48,8 @@ Given('I have a task named {string}', async ({ page }, name: string) => {
 });
 
 Given('I am viewing the task lists page', async ({ page }) => {
-  await page.getByRole('link', { name: 'All Lists' }).click();
+  // The Lists tab is the index now — there is no "All Lists" sidebar link.
+  await page.getByRole('link', { name: 'Lists', exact: true }).click();
   await expect(page).toHaveURL(/\/task-lists$/);
 });
 

@@ -46,7 +46,7 @@ Feature: Optimistic updates
     Given I am viewing the task lists page
     And the API stops responding
     When I submit a new list named "Instant List"
-    Then "Instant List" appears in the sidebar
+    Then "Instant List" appears in the list of lists
 
   Scenario: A new template task appears before the server responds
     Given I have a template named "Optimistic Template"

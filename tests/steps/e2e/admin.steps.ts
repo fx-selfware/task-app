@@ -27,16 +27,16 @@ Given('I am logged in as an admin user', async ({ page }) => {
   }
 });
 
-Then('the sidebar does not have an {string} link', async ({ page }, linkText: string) => {
-  await expect(page.locator('nav').getByText(linkText, { exact: true })).not.toBeVisible({ timeout: 3000 });
+Then('the You tab does not offer {string}', async ({ page }, linkText: string) => {
+  await expect(page.getByRole('link', { name: linkText, exact: true })).not.toBeVisible({ timeout: 3000 });
 });
 
-Then('the sidebar has an {string} link', async ({ page }, linkText: string) => {
-  await expect(page.locator('nav').getByText(linkText, { exact: true })).toBeVisible({ timeout: 5000 });
+Then('the You tab offers {string}', async ({ page }, linkText: string) => {
+  await expect(page.getByRole('link', { name: linkText, exact: true })).toBeVisible({ timeout: 5000 });
 });
 
-When('I click the {string} link in the sidebar', async ({ page }, linkText: string) => {
-  await page.locator('nav').getByText(linkText, { exact: true }).click();
+When('I open {string} from the You tab', async ({ page }, linkText: string) => {
+  await page.getByRole('link', { name: linkText, exact: true }).click();
   await page.waitForURL(/\/admin/);
 });
 
