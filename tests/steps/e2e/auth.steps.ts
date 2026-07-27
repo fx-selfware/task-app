@@ -81,11 +81,20 @@ When(
  * so the rest of the app is deliberately left working. Scenarios run serially
  * (workers: 1), so a module-level switch is enough to flip the route mid-test.
  */
-const sessionCheck = { failuresLeft: 0 };
+const sessionCheck = { failuresLeft: 0, stalled: false };
+
+/**
+ * Long enough that the assertions in a scenario all finish while the check is
+ * still outstanding — a stalled check is the point, since anything asserted
+ * while it hangs was rendered without knowing who the user is.
+ */
+const STALL_MS = 30_000;
 
 async function interceptSessionCheck(page: import('@playwright/test').Page) {
   sessionCheck.failuresLeft = 0;
+  sessionCheck.stalled = false;
   await page.route('**/api/auth/me', async (route) => {
+    if (sessionCheck.stalled) await new Promise((resolve) => setTimeout(resolve, STALL_MS));
     if (sessionCheck.failuresLeft === 0) return route.continue();
     if (sessionCheck.failuresLeft > 0) sessionCheck.failuresLeft -= 1;
     return route.abort('failed');
@@ -104,6 +113,19 @@ Given('the session check keeps failing', async ({ page }) => {
 
 When('the session check recovers', async () => {
   sessionCheck.failuresLeft = 0;
+});
+
+Given('the session check is slow to answer', async ({ page }) => {
+  await interceptSessionCheck(page);
+  sessionCheck.stalled = true;
+});
+
+Then('the account area shows a placeholder', async ({ page }) => {
+  await expect(page.getByRole('status', { name: 'Loading account' })).toBeVisible();
+});
+
+Then('the account area no longer shows a placeholder', async ({ page }) => {
+  await expect(page.getByRole('status', { name: 'Loading account' })).toHaveCount(0);
 });
 
 /** A properly signed token the server will reject — the state a week away leaves behind. */

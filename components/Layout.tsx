@@ -134,13 +134,34 @@ export function Layout({ children }: LayoutProps) {
           <div className="border-t p-3">
             <p className="mb-2 text-center text-xs text-gray-400">build {process.env.NEXT_PUBLIC_APP_COMMIT ?? 'dev'}</p>
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-sm font-semibold">
-                {user?.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-800">{user?.name}</p>
-                <p className="truncate text-xs text-gray-500">{user?.email}</p>
-              </div>
+              {user ? (
+                <>
+                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-sm font-semibold">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-gray-800">{user.name}</p>
+                    <p className="truncate text-xs text-gray-500">{user.email}</p>
+                  </div>
+                </>
+              ) : (
+                // AuthGuard renders the app alongside the session check rather
+                // than behind it, so there is a moment with no account to show.
+                // Drawing the real block from nothing leaves an empty circle
+                // over two empty lines, which reads as broken instead of
+                // pending. Same boxes, so nothing shifts when the name lands.
+                <div
+                  role="status"
+                  aria-label="Loading account"
+                  className="flex min-w-0 flex-1 animate-pulse items-center gap-2"
+                >
+                  <div className="h-8 w-8 shrink-0 rounded-full bg-gray-200" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="h-3 w-24 max-w-full rounded bg-gray-200" />
+                    <div className="h-2 w-32 max-w-full rounded bg-gray-200" />
+                  </div>
+                </div>
+              )}
               <button
                 onClick={handleLogout}
                 className="rounded p-2 text-gray-400 hover:text-gray-700"
