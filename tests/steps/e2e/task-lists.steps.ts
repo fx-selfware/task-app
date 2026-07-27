@@ -265,3 +265,27 @@ When('I expand the subtasks of {string}', async ({ page }, parentName: string) =
   const expandBtn = page.getByRole('button', { name: 'Expand subtasks' });
   await expandBtn.click();
 });
+
+// --- depth by horizontal drag ---------------------------------------------
+async function dragSideways(page: import('@playwright/test').Page, name: string, dx: number) {
+  const row = page.getByTestId('task-row').filter({ hasText: name }).first();
+  const box = await row.boundingBox();
+  const x = box!.x + box!.width * 0.45;
+  const y = box!.y + box!.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  // Past the MouseSensor's activation distance first, then sideways.
+  for (let i = 1; i <= 10; i++) {
+    await page.mouse.move(x + (dx * i) / 10, y);
+    await page.waitForTimeout(16);
+  }
+  await page.mouse.up();
+}
+
+When('I drag {string} to the right', async ({ page }, name: string) => {
+  await dragSideways(page, name, 70);
+});
+
+When('I drag {string} to the left', async ({ page }, name: string) => {
+  await dragSideways(page, name, -70);
+});

@@ -16,6 +16,10 @@ export interface TaskRowProps {
   onToggleCollapse?: () => void;
   onToggleDone?: () => void;
   onSave?: (value: { title: string; description: string | null }) => void;
+  /** True while dnd-kit owns this row. The lift is what switches a sideways
+   *  move from "reveal the actions" to "change the depth" — without it the two
+   *  gestures fight over the same motion. */
+  dragging?: boolean;
   /** Rendered inside the row's action bar while editing. */
   actions?: { label: string; onClick: () => void; danger?: boolean }[];
 }
@@ -39,6 +43,7 @@ export function TaskRow({
   onToggleCollapse,
   onToggleDone,
   onSave,
+  dragging = false,
   actions = [],
 }: TaskRowProps) {
   const [editing, setEditing] = useState(false);
@@ -115,7 +120,7 @@ export function TaskRow({
       )}
       <div
         onPointerDown={(e) => {
-          if (!canWrite || editing) return;
+          if (!canWrite || editing || dragging) return;
           if (e.pointerType === 'mouse' && e.button !== 0) return;
           if (e.nativeEvent.clientX - (e.currentTarget.getBoundingClientRect().left ?? 0) < EDGE_GUARD && !revealed) {
             // leave the iOS back-swipe zone alone
@@ -125,6 +130,7 @@ export function TaskRow({
         onPointerMove={(e) => {
           const d = drag.current;
           if (!d || d.id !== e.pointerId) return;
+          if (dragging) { drag.current = null; setDx(revealed ? -REVEAL : 0); return; }
           const mx = e.clientX - d.x0;
           const my = e.clientY - d.y0;
           if (d.axis === 'none') {

@@ -114,6 +114,10 @@ export default function TaskListDetailPage() {
     return groups;
   }, [tasks]);
 
+  // Subtasks collapse while their parent is in flight — but not while a subtask
+  // itself is being dragged, or the row would unmount mid-gesture.
+  const draggingParent = activeDragId !== null && todoTasks.some((t) => t.id === activeDragId);
+
   const sensors = useSensors(
     // A few pixels of travel for a mouse, a held press for a finger: both let an
     // ordinary tap through to the row so it can open for editing.
@@ -128,8 +132,36 @@ export default function TaskListDetailPage() {
   const { list, isOwner, permission } = data;
   const canWrite = permission === 'WRITE';
 
+  // Vertical position is order; horizontal position is depth. Reading the X
+  // axis the drag already produces replaces both "Move under..." and "Move to
+  // top level" — a menu is a poor place to express "put this inside that".
+  const NEST_PX = 36;
+
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+    const { active, over, delta } = event;
+    const id = active.id as string;
+
+    const parentOf = todoTasks.find((t) => (t.subtasks ?? []).some((sub) => sub.id === id));
+    const dragged = parentOf
+      ? (parentOf.subtasks ?? []).find((sub) => sub.id === id)
+      : todoTasks.find((t) => t.id === id);
+    if (!dragged) return;
+
+    if (delta.x >= NEST_PX && !parentOf) {
+      // One level only: a task that already has subtasks cannot become one.
+      if ((dragged.subtasks ?? []).length > 0) return;
+      const idx = todoTasks.findIndex((t) => t.id === id);
+      const newParent = todoTasks[idx - 1];
+      if (newParent) moveTask.mutate({ taskId: id, parentId: newParent.id });
+      return;
+    }
+
+    if (delta.x <= -NEST_PX && parentOf) {
+      moveTask.mutate({ taskId: id, parentId: null });
+      return;
+    }
+
+    if (parentOf) return; // subtasks reorder within their parent, not here
     if (!over || active.id === over.id) return;
     const oldIndex = todoTasks.findIndex((t) => t.id === active.id);
     const newIndex = todoTasks.findIndex((t) => t.id === over.id);
@@ -190,7 +222,10 @@ export default function TaskListDetailPage() {
             onDragCancel={() => setActiveDragId(null)}
             onDragEnd={(e) => { setActiveDragId(null); handleDragEnd(e); }}
           >
-            <SortableContext items={todoTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext
+              items={todoTasks.flatMap((t) => [t.id, ...(t.subtasks ?? []).map((sub) => sub.id)])}
+              strategy={verticalListSortingStrategy}
+            >
               <div>
                 {todoTasks.map((task) => {
                   const todoSubs = (task.subtasks ?? []).filter((s) => s.status === 'TODO');
@@ -209,9 +244,9 @@ export default function TaskListDetailPage() {
                         onSave={(v) => updateTask.mutate({ taskId: task.id, data: v })}
                         actions={rowActions(task, false)}
                       />
-                      {!collapsed && !activeDragId &&
+                      {!collapsed && !draggingParent &&
                         todoSubs.map((sub) => (
-                          <TaskRow
+                          <SortableTaskRow
                             key={sub.id}
                             id={sub.id}
                             title={sub.title}

@@ -156,3 +156,22 @@ Feature: Task Lists
   Scenario: The app displays a build version on the You tab
     When I open the You tab
     Then a real build hash is shown
+
+  # Vertical position is order, horizontal position is depth — one gesture does
+  # both jobs, and replaces reaching for "Move under..." in the action bar.
+  Scenario: Dragging a task right nests it under the task above
+    Given I have a task list named "Depth List"
+    When I open the task list "Depth List"
+    And I add a task named "Anchor"
+    And I add a task named "Drifter"
+    And I drag "Drifter" to the right
+    Then "Drifter" is visible as a subtask of "Anchor"
+
+  Scenario: A task that already has subtasks refuses to be nested
+    Given I have a task list named "Cap List"
+    When I open the task list "Cap List"
+    And I add a task named "Top"
+    And I add a task named "Holder"
+    And I add a subtask named "Kid" to "Holder"
+    And I drag "Holder" to the right
+    Then "Holder" is a top-level task after "Top"

@@ -33,7 +33,7 @@ export function SortableTaskRow({ id, ...props }: TaskRowProps) {
       aria-label={`Reorder "${props.title}"`}
       {...listeners}
     >
-      <TaskRow id={id} {...props} />
+      <TaskRow id={id} {...props} dragging={isDragging} />
     </div>
   );
 }
