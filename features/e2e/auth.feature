@@ -81,3 +81,25 @@ Feature: Authentication
     And I retry reaching the server
     Then I am no longer told the app cannot reach the server
     And I am still signed in
+
+  # The app deliberately renders before the session check answers, so its own
+  # queries go out alongside it rather than behind it. That leaves a moment with
+  # no account to show, and an account area drawn from nothing is an empty
+  # circle above two empty lines — which reads as broken rather than as loading.
+
+  @ac
+  Scenario: The account area shows a placeholder while the session is being confirmed
+    Given I am logged in as a new user
+    And the session check is slow to answer
+    When I reopen the app
+    Then the account area shows a placeholder
+
+  @ac
+  Scenario: The account area gives way to my name once the session is confirmed
+    Given I am logged in as a new user
+    And the session check is slow to answer
+    And I reopen the app
+    And the account area shows a placeholder
+    When the session check answers
+    Then I am still signed in
+    And the account area no longer shows a placeholder
