@@ -46,7 +46,7 @@ export function Composer({ label, onSubmit, withDescription = false, disabled = 
   };
 
   return (
-    <div className="border-t border-gray-200 bg-gray-50 px-4 pb-3 pt-2.5 dark:border-gray-800 dark:bg-gray-900">
+    <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-gray-50/95 px-4 pb-3 pt-2.5 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
       <div className="flex items-center gap-2.5">
         <span
           aria-hidden="true"

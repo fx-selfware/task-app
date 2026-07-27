@@ -185,14 +185,18 @@ export default function TaskListDetailPage() {
 
   return (
     <div className="mx-auto flex h-full max-w-2xl flex-col">
-      <div className="mb-1 flex items-start justify-between gap-3 px-4 pt-1">
+      <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-3">
         <div className="min-w-0">
           <EditableHeading
             value={list.name}
             canEdit={isOwner}
             onSave={(name) => renameList.mutate({ id: id!, name })}
           />
-          <p className="text-sm text-gray-500">{isOwner ? 'Owner' : `Shared · ${permission.toLowerCase()}`}</p>
+          {!isOwner && (
+            <p className="text-[13px] text-gray-500">
+              Shared · {permission === 'WRITE' ? 'you can edit' : 'you can view'}
+            </p>
+          )}
         </div>
         <OverflowMenu
           aria-label="List actions"
@@ -290,7 +294,6 @@ export default function TaskListDetailPage() {
           onUncheck={(taskId) => updateTask.mutate({ taskId, data: { status: 'TODO' } })}
           onClear={() => deleteCompletedTasks.mutate()}
         />
-      </div>
 
       {canWrite && (
         <Composer
@@ -302,6 +305,7 @@ export default function TaskListDetailPage() {
           }}
         />
       )}
+      </div>
 
       <ConfirmDialog
         open={!!deleteTarget}

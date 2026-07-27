@@ -93,9 +93,9 @@ When('I move the task {string} under {string}', async ({ page }, name: string, p
 });
 
 When('I submit a new list named {string}', async ({ page }, name: string) => {
-  await page.getByRole('button', { name: '+ New List' }).click();
-  await page.getByLabel('List name').fill(name);
-  await page.getByRole('dialog').getByRole('button', { name: 'Create' }).click();
+  const composer = page.getByLabel('New list');
+  await composer.fill(name);
+  await composer.press('Enter');
 });
 
 When('I submit a new template task named {string}', async ({ page }, name: string) => {

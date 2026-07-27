@@ -6,19 +6,17 @@ let collabPage: Page | null = null;
 let lastDragMouseY = 0;
 
 Given('I have a task list named {string}', async ({ page }, name: string) => {
-  await page.click('text=+ New List');
-  const nameInput = page.getByLabel('List name');
-  await nameInput.fill(name);
-  await page.click('button[type="submit"]');
+  const composer = page.getByLabel('New list');
+  await composer.fill(name);
+  await composer.press('Enter');
   await expect(page.locator(`[data-testid="list-link"][data-list-name="${name}"]`))
     .toBeVisible({ timeout: 5000 });
 });
 
 When('I create a task list named {string}', async ({ page }, name: string) => {
-  await page.click('text=+ New List');
-  const nameInput = page.getByLabel('List name');
-  await nameInput.fill(name);
-  await page.click('button[type="submit"]');
+  const composer = page.getByLabel('New list');
+  await composer.fill(name);
+  await composer.press('Enter');
 });
 
 Then('{string} appears in the list of lists', async ({ page }, name: string) => {
