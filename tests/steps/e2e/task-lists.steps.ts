@@ -37,23 +37,23 @@ When('I open the share modal for {string}', async ({ page }, name: string) => {
 });
 
 When('I add a task named {string}', async ({ page }, name: string) => {
-  await page.getByRole('button', { name: 'Add task' }).click();
-  await page.getByLabel('Title').fill(name);
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });
+  // Direction A: the composer is always live at the foot of the list. No FAB,
+  // no modal — type and press Return, and the field keeps focus for the next.
+  const composer = page.getByLabel('Add a task');
+  await composer.fill(name);
+  await composer.press('Enter');
+  await expect(page.getByTestId('task-title').filter({ hasText: name })).toBeVisible({ timeout: 5000 });
 });
 
 When('I edit the task {string} to have title {string} and description {string}', async ({ page }, oldName: string, newTitle: string, description: string) => {
-  await page.locator('p').filter({ hasText: oldName }).first().click();
-  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
-  const titleInput = page.getByLabel('Title');
-  await titleInput.clear();
+  // Tap the text and the row edits in place — there is no dialog.
+  await page.getByTestId('task-title').filter({ hasText: oldName }).first().click();
+  const titleInput = page.getByLabel('Task title');
   await titleInput.fill(newTitle);
-  const descTextarea = page.getByRole('dialog').locator('textarea');
-  await descTextarea.clear();
-  await descTextarea.fill(description);
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
+  const desc = page.getByLabel('Task description');
+  await desc.fill(description);
+  await desc.press('Enter');
+  await expect(titleInput).not.toBeVisible({ timeout: 3000 });
 });
 
 Then('{string} is visible in the task list', async ({ page }, name: string) => {
@@ -87,16 +87,13 @@ When('I check the checkbox for {string}', async ({ page }, name: string) => {
 });
 
 Then('the completed section shows {int} completed task(s)', async ({ page }, count: number) => {
-  await expect(page.getByRole('button', { name: new RegExp(`Completed \\(${count}\\)`) })).toBeVisible({ timeout: 5000 });
+  await expect(page.getByTestId('completed-count')).toHaveText(`${count} completed`, { timeout: 5000 });
 });
 
 When('I expand the completed section', async ({ page }) => {
-  const button = page.getByRole('button', { name: /Completed \(/ });
-  await expect(button).toBeVisible({ timeout: 5000 });
-  const text = await button.textContent();
-  if (text?.includes('▶')) {
-    await button.click();
-  }
+  const show = page.getByTestId('completed-group').getByRole('button', { name: 'Show' });
+  if (await show.isVisible()) await show.click();
+  await expect(page.getByTestId('completed-group').getByRole('button', { name: 'Hide' })).toBeVisible({ timeout: 5000 });
 });
 
 When('I uncheck the checkbox for {string}', async ({ page }, name: string) => {
@@ -104,7 +101,7 @@ When('I uncheck the checkbox for {string}', async ({ page }, name: string) => {
 });
 
 Then('the completed section is not visible', async ({ page }) => {
-  await expect(page.getByRole('button', { name: /Completed \(/ })).not.toBeVisible({ timeout: 3000 });
+  await expect(page.getByTestId('completed-group')).not.toBeVisible({ timeout: 5000 });
 });
 
 When('I click {string}', async ({ page }, label: string) => {
@@ -112,7 +109,7 @@ When('I click {string}', async ({ page }, label: string) => {
 });
 
 Then('{string} appears with strikethrough styling', async ({ page }, name: string) => {
-  const taskTitle = page.locator('p').filter({ hasText: name }).first();
+  const taskTitle = page.getByTestId('task-title').filter({ hasText: name }).first();
   await expect(taskTitle).toHaveClass(/line-through/, { timeout: 5000 });
 });
 
@@ -158,24 +155,21 @@ Then(
 // --- Subtask steps ---
 
 When('I add a subtask named {string} to {string}', async ({ page }, subName: string, parentName: string) => {
-  // Open the overflow menu on the parent card, then click "Add subtask"
-  const parentCard = page.locator('.group').filter({ hasText: parentName }).first();
-  await parentCard.getByRole('button', { name: 'Task actions' }).click();
-  await page.getByRole('menuitem', { name: 'Add subtask' }).click();
-  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
-  await page.getByLabel('Title').fill(subName);
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
-  await expect(page.getByText(subName)).toBeVisible({ timeout: 5000 });
+  // Open the parent row, choose Add subtask, then the composer is aimed at it.
+  await page.getByTestId('task-title').filter({ hasText: parentName }).first().click();
+  await page.getByRole('button', { name: 'Add subtask' }).click();
+  const composer = page.getByLabel(`Add a subtask to "${parentName}"`);
+  await composer.fill(subName);
+  await composer.press('Enter');
+  await expect(page.getByTestId('task-title').filter({ hasText: subName })).toBeVisible({ timeout: 5000 });
 });
 
 When('I open the task menu for {string}', async ({ page }, name: string) => {
-  const card = page.locator('.group').filter({ hasText: name }).first();
-  await card.getByRole('button', { name: 'Task actions' }).click();
+  await page.getByTestId('task-title').filter({ hasText: name }).first().click();
 });
 
 When('I click the menu item {string}', async ({ page }, label: string) => {
-  await page.getByRole('menuitem', { name: label }).click();
+  await page.getByRole('button', { name: label, exact: true }).click();
 });
 
 When('I select {string} in the move modal', async ({ page }, parentName: string) => {

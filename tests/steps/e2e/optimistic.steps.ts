@@ -41,10 +41,10 @@ Given('writes to the API start failing', async ({ page }) => {
 });
 
 Given('I have a task named {string}', async ({ page }, name: string) => {
-  await page.getByRole('button', { name: 'Add task' }).click();
-  await page.getByLabel('Title').fill(name);
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(page.getByText(name, { exact: true })).toBeVisible({ timeout: 5000 });
+  const composer = page.getByLabel('Add a task');
+  await composer.fill(name);
+  await composer.press('Enter');
+  await expect(page.getByTestId('task-title').filter({ hasText: name })).toBeVisible({ timeout: 5000 });
 });
 
 Given('I am viewing the task lists page', async ({ page }) => {
@@ -55,39 +55,37 @@ Given('I am viewing the task lists page', async ({ page }) => {
 // --- actions that must not wait for a response ---
 
 When('I submit a new task named {string}', async ({ page }, name: string) => {
-  await page.getByRole('button', { name: 'Add task' }).click();
-  await page.getByLabel('Title').fill(name);
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  const composer = page.getByLabel('Add a task');
+  await composer.fill(name);
+  await composer.press('Enter');
 });
 
 When('I delete the task {string}', async ({ page }, name: string) => {
-  const card = page.locator('.group').filter({ hasText: name }).first();
-  await card.getByRole('button', { name: 'Task actions' }).click();
-  await page.getByRole('menuitem', { name: 'Delete' }).click();
+  await page.getByTestId('task-title').filter({ hasText: name }).first().click();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 3000 });
   await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
 });
 
 When('I submit a rename of the list to {string}', async ({ page }, name: string) => {
-  await page.getByRole('button', { name: 'List actions' }).click();
-  await page.getByRole('menuitem', { name: 'Rename' }).click();
-  // getByLabel('Name') would also match the "Rename List" dialog itself.
-  await page.getByRole('textbox', { name: 'Name', exact: true }).fill(name);
-  await page.getByRole('dialog').getByRole('button', { name: 'Rename' }).click();
+  // The heading renames in place — tap it, type, Return.
+  await page.locator('h1').first().click();
+  const field = page.getByLabel('List name');
+  await field.fill(name);
+  await field.press('Enter');
 });
 
 When('I submit an edit of the task {string} titled {string}', async ({ page }, name: string, newName: string) => {
-  await page.locator('p').filter({ hasText: name }).first().click();
-  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
-  await page.getByLabel('Title').fill(newName);
-  await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await page.getByTestId('task-title').filter({ hasText: name }).first().click();
+  const field = page.getByLabel('Task title');
+  await field.fill(newName);
+  await field.press('Enter');
 });
 
 When('I move the task {string} under {string}', async ({ page }, name: string, parentName: string) => {
-  const card = page.locator('.group').filter({ hasText: name }).first();
-  await card.getByRole('button', { name: 'Task actions' }).click();
-  await page.getByRole('menuitem', { name: 'Move under...' }).click();
+  await page.getByTestId('task-title').filter({ hasText: name }).first().click();
+  await page.getByRole('button', { name: 'Move under...', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 3000 });
   await dialog.getByText(parentName, { exact: true }).click();
@@ -100,9 +98,9 @@ When('I submit a new list named {string}', async ({ page }, name: string) => {
 });
 
 When('I submit a new template task named {string}', async ({ page }, name: string) => {
-  await page.getByRole('button', { name: 'Add task' }).click();
-  await page.getByLabel('Title').fill(name);
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  const composer = page.getByLabel('Add a task');
+  await composer.fill(name);
+  await composer.press('Enter');
 });
 
 // --- assertions ---

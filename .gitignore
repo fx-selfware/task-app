@@ -36,3 +36,4 @@ Thumbs.db
 
 # Benchmark reports
 .perf/
+tsconfig.tsbuildinfo
