@@ -12,9 +12,9 @@ When('I navigate to the templates page', async ({ page }) => {
 });
 
 When('I create a template named {string}', async ({ page }, name: string) => {
-  await page.getByRole('button', { name: '+ New Template' }).click();
-  await page.getByLabel('Template name').fill(name);
-  await page.getByRole('button', { name: 'Create' }).click();
+  const composer = page.getByLabel('New template');
+  await composer.fill(name);
+  await composer.press('Enter');
   await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
 });
 
@@ -27,9 +27,9 @@ Given('I have a template named {string}', async ({ page }, name: string) => {
   await page.getByText('Templates', { exact: true }).click();
   await page.waitForURL(/\/templates/);
   // Create the template
-  await page.getByRole('button', { name: '+ New Template' }).click();
-  await page.getByLabel('Template name').fill(name);
-  await page.getByRole('button', { name: 'Create' }).click();
+  const composer = page.getByLabel('New template');
+  await composer.fill(name);
+  await composer.press('Enter');
   await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
   await expect(page.getByText(name)).toBeVisible({ timeout: 5000 });
 });
@@ -124,3 +124,4 @@ Then(
     tplCollabPage = null;
   },
 );
+

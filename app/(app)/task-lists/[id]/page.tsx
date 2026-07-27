@@ -357,6 +357,7 @@ export default function TaskListDetailPage() {
       />
 
       {isOwner && <SharesModal open={showShares} onClose={() => setShowShares(false)} listId={id!} />}
+
     </div>
   );
 }

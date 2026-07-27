@@ -6,6 +6,11 @@ let collabPage: Page | null = null;
 let lastDragMouseY = 0;
 
 Given('I have a task list named {string}', async ({ page }, name: string) => {
+  // The composer lives on the Lists tab, so make sure we are on it — this step
+  // is used from template and admin scenarios too.
+  if (!/\/task-lists$/.test(new URL(page.url()).pathname)) {
+    await page.goto('/task-lists');
+  }
   const composer = page.getByLabel('New list');
   await composer.fill(name);
   await composer.press('Enter');

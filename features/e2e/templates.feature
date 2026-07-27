@@ -28,3 +28,4 @@ Feature: Templates
     And the collaborator "tpl-collab@example.com" opens the template "Shared Template"
     And I add a template task named "Live Template Task"
     Then the collaborator sees "Live Template Task" in the template without refreshing
+

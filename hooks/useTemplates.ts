@@ -151,10 +151,13 @@ function reorderInTemplate(detail: TemplateDetail, orderedIds: string[], parentI
 const templateScope = (templateId: string) => ({ id: `template-${templateId}` });
 const indexScope = { id: 'templates' };
 
-export function useTemplates() {
+export function useTemplates(enabled = true) {
   return useQuery({
     queryKey: indexKey,
     queryFn: () => templatesApi.getAll(),
+    // Gated like useShares: the apply sheet is mounted on every task list, and
+    // this would otherwise fetch on every list open whether or not it is shown.
+    enabled,
   });
 }
 
