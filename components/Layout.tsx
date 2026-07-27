@@ -151,12 +151,14 @@ export function Layout({ children }: LayoutProps) {
                 // over two empty lines, which reads as broken instead of
                 // pending. Same boxes, so nothing shifts when the name lands.
                 <div
-                  role="status"
-                  aria-label="Loading account"
+                  data-testid="account-loading"
+                  aria-hidden="true"
                   className="flex min-w-0 flex-1 animate-pulse items-center gap-2"
                 >
                   <div className="h-8 w-8 shrink-0 rounded-full bg-gray-200" />
-                  <div className="min-w-0 flex-1 space-y-1.5">
+                  {/* h-9 matches the two <p> it stands in for (20px + 16px of
+                      line height), so the row doesn't grow when they arrive. */}
+                  <div className="flex h-9 min-w-0 flex-1 flex-col justify-center gap-1.5">
                     <div className="h-3 w-24 max-w-full rounded bg-gray-200" />
                     <div className="h-2 w-32 max-w-full rounded bg-gray-200" />
                   </div>

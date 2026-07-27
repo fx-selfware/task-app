@@ -94,7 +94,12 @@ async function interceptSessionCheck(page: import('@playwright/test').Page) {
   sessionCheck.failuresLeft = 0;
   sessionCheck.stalled = false;
   await page.route('**/api/auth/me', async (route) => {
-    if (sessionCheck.stalled) await new Promise((resolve) => setTimeout(resolve, STALL_MS));
+    // Held rather than slept, so a step can end the stall and watch the app
+    // recover — a fixed sleep could only ever show the pending half.
+    const until = Date.now() + STALL_MS;
+    while (sessionCheck.stalled && Date.now() < until) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
     if (sessionCheck.failuresLeft === 0) return route.continue();
     if (sessionCheck.failuresLeft > 0) sessionCheck.failuresLeft -= 1;
     return route.abort('failed');
@@ -120,12 +125,16 @@ Given('the session check is slow to answer', async ({ page }) => {
   sessionCheck.stalled = true;
 });
 
+When('the session check answers', async () => {
+  sessionCheck.stalled = false;
+});
+
 Then('the account area shows a placeholder', async ({ page }) => {
-  await expect(page.getByRole('status', { name: 'Loading account' })).toBeVisible();
+  await expect(page.getByTestId('account-loading')).toBeVisible();
 });
 
 Then('the account area no longer shows a placeholder', async ({ page }) => {
-  await expect(page.getByRole('status', { name: 'Loading account' })).toHaveCount(0);
+  await expect(page.getByTestId('account-loading')).toHaveCount(0);
 });
 
 /** A properly signed token the server will reject — the state a week away leaves behind. */

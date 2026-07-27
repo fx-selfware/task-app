@@ -95,8 +95,11 @@ Feature: Authentication
     Then the account area shows a placeholder
 
   @ac
-  Scenario: The account area shows who I am once the session is confirmed
+  Scenario: The account area gives way to my name once the session is confirmed
     Given I am logged in as a new user
-    When I reopen the app
+    And the session check is slow to answer
+    And I reopen the app
+    And the account area shows a placeholder
+    When the session check answers
     Then I am still signed in
     And the account area no longer shows a placeholder
