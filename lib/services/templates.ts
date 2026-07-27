@@ -226,6 +226,8 @@ export async function updateTemplateTask(
   const data: Partial<typeof templateTasks.$inferInsert> = {};
   if (input.title !== undefined) data.title = input.title;
   if (input.description !== undefined) data.description = input.description;
+  // See updateTask: nothing to apply is a 400, not an empty SET.
+  if (Object.keys(data).length === 0) httpError(400, 'no fields to update');
 
   return await db.update(templateTasks).set(data).where(eq(templateTasks.id, taskId)).returning().get();
 }

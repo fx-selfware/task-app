@@ -100,6 +100,9 @@ export async function updateTask(
   if (input.title !== undefined) data.title = input.title;
   if (input.description !== undefined) data.description = input.description;
   if (input.status !== undefined) data.status = input.status;
+  // An empty SET is a database error, not an update. Every other endpoint
+  // answers a request carrying nothing to apply with a 400; so does this one.
+  if (Object.keys(data).length === 0) httpError(400, 'no fields to update');
 
   // Completing a parent task cascades to all subtasks
   if (input.status === 'DONE' && task.parentId === null) {

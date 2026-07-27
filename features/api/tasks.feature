@@ -18,6 +18,29 @@ Feature: Tasks API
     Then the status is 200
     And the task has status "DONE" and title "Updated"
 
+  # An update carrying nothing to apply is the client's mistake, and every other
+  # endpoint already says so with a 400. These used to reach the database with
+  # an empty SET and come back as a 500 with a stack trace in the server log —
+  # which is what a write cut off in transit looks like on a phone that loses
+  # signal mid-request, so it charged real 500s against a client-side problem.
+  Scenario: An update with no fields is rejected rather than failing
+    Given I have a task "Task 1" in that list
+    When I PATCH that task with body '{}'
+    Then the status is 400
+    And the response body has error "no fields to update"
+
+  Scenario: An update naming only unknown fields is rejected rather than failing
+    Given I have a task "Task 1" in that list
+    When I PATCH that task with body '{"colour":"red"}'
+    Then the status is 400
+    And the response body has error "no fields to update"
+
+  Scenario: An update whose body was cut off in transit is rejected rather than failing
+    Given I have a task "Task 1" in that list
+    When I PATCH that task with a body that was cut off in transit
+    Then the status is 400
+    And the response body has error "invalid JSON body"
+
   Scenario: Owner can delete task
     Given I have a task "Task 1" in that list
     When I DELETE that task with my cookie
