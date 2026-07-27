@@ -28,15 +28,23 @@ export class ApiWorld {
 
   constructor(private baseURL: string) {}
 
-  async request(method: string, url: string, opts: { payload?: unknown; cookie?: string } = {}): Promise<ApiResponse> {
+  async request(
+    method: string,
+    url: string,
+    // `rawBody` goes out exactly as given, which is the only way to send
+    // something that isn't valid JSON — a request cut off in transit, say.
+    opts: { payload?: unknown; rawBody?: string; cookie?: string } = {},
+  ): Promise<ApiResponse> {
     const headers: Record<string, string> = {};
-    if (opts.payload !== undefined) headers['content-type'] = 'application/json';
+    if (opts.payload !== undefined || opts.rawBody !== undefined) {
+      headers['content-type'] = 'application/json';
+    }
     if (opts.cookie) headers['cookie'] = opts.cookie;
 
     const res = await fetch(`${this.baseURL}${url}`, {
       method,
       headers,
-      body: opts.payload !== undefined ? JSON.stringify(opts.payload) : undefined,
+      body: opts.rawBody ?? (opts.payload !== undefined ? JSON.stringify(opts.payload) : undefined),
       redirect: 'manual',
     });
 

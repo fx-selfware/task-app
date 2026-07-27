@@ -51,6 +51,14 @@ When('I PATCH that task with body {string}', async ({ world }, bodyJson: string)
   });
 });
 
+/** What the server sees when a write is interrupted: a body that stops mid-JSON. */
+When('I PATCH that task with a body that was cut off in transit', async ({ world }) => {
+  await world.request('PATCH', `/api/task-lists/${world.listId}/tasks/${world.taskId}`, {
+    rawBody: '{"title":"half',
+    cookie: world.myCookie,
+  });
+});
+
 Then('the task has status {string} and title {string}', async ({ world }, status: string, title: string) => {
   expect(world.response.body?.task?.status).toBe(status);
   expect(world.response.body?.task?.title).toBe(title);
