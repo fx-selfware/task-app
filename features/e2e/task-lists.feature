@@ -8,7 +8,6 @@ Feature: Task Lists
     When I create a task list named "Shopping"
     Then "Shopping" appears in the sidebar
 
-  @ac
   Scenario: A user can edit a task's title and description
     Given I have a task list named "My List"
     When I open the task list "My List"
@@ -18,7 +17,6 @@ Feature: Task Lists
     And "Buy milk" is no longer visible in the task list
     And "From the oat aisle" is visible in the task list
 
-  @ac
   Scenario: A user can share a task list by email and see who has access
     Given I have a task list named "Work"
     And a collaborator exists with email "collab@example.com"
@@ -26,7 +24,6 @@ Feature: Task Lists
     And I invite "collab@example.com" with "Read" permission
     Then "collab@example.com" is listed in the share modal with "Read" access
 
-  @ac
   Scenario: A user can complete tasks, uncheck them, and delete all completed tasks
     Given I have a task list named "Todo App"
     When I open the task list "Todo App"
@@ -48,7 +45,6 @@ Feature: Task Lists
     And I confirm the deletion
     Then the completed section is not visible
 
-  @ac
   Scenario: Shared list updates in real-time when another user adds a task
     Given I have a task list named "Realtime List"
     And a collaborator exists with email "rt@example.com"
@@ -59,7 +55,6 @@ Feature: Task Lists
     And I add a task named "Live Update Task"
     Then the collaborator sees "Live Update Task" without refreshing
 
-  @ac
   Scenario: A user can add a subtask to a task
     Given I have a task list named "Subtask List"
     When I open the task list "Subtask List"
@@ -135,7 +130,6 @@ Feature: Task Lists
     Then "Sub1" is visible in the task list
     And "Sub2" is visible in the task list
 
-  @ac
   Scenario: A user can promote a subtask to a top-level task
     Given I have a task list named "Promote List"
     When I open the task list "Promote List"
@@ -146,7 +140,6 @@ Feature: Task Lists
     Then "Child" is visible in the task list
     And "Child" is a top-level task after "Parent"
 
-  @ac
   Scenario: A user can demote a top-level task under another task and reparent a subtask
     Given I have a task list named "Move List"
     When I open the task list "Move List"

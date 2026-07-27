@@ -9,7 +9,6 @@ Feature: Templates
     And I create a template named "Sprint Template"
     Then "Sprint Template" is visible on the templates page
 
-  @ac
   Scenario: A user can reorder template tasks by dragging
     Given I have a template named "Reorder Template"
     When I open the template "Reorder Template"
@@ -18,7 +17,6 @@ Feature: Templates
     And I drag the template task "Second Task" above "First Task"
     Then "Second Task" appears before "First Task" in the template
 
-  @ac
   Scenario: A user can share a template and see real-time updates from a collaborator
     Given I have a template named "Shared Template"
     And a collaborator exists with email "tpl-collab@example.com"

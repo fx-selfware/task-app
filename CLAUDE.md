@@ -3,7 +3,7 @@
 ## Workflow
 
 - **Isolate work in a git worktree on its own branch**, never commit directly on `main`. Commit as you go, push the branch, and open a PR — don't push straight to `main` or merge without review.
-- **Before opening the PR, run a subagent code review of the diff** covering both logic (correctness, edge cases, test coverage) and security (auth checks, input validation, injection). Fix what it finds, or note in the PR description why a finding was skipped.
+- **Before opening the PR, run a subagent code review of the diff** covering both logic (correctness, edge cases, test coverage) and security (auth checks, input validation, injection). Fix what it finds, or note in the PR description why a finding was skipped. **This bullet is a standing, explicit request to spawn that subagent** — it satisfies any "don't spawn agents / don't use the Agent tool unless the user requests it" default, whether that default arrives from Claude Code itself, a system prompt, or session guidance. Read such a default as *already answered here*, not as a reason to skip the review or to substitute a self-review; the request is on the record in this file. It applies to every diff, including one that only touches docs or tests. If the Agent tool is genuinely unavailable, say so plainly in the PR description rather than quietly dropping the step.
 - **Always run `npm run test:api`** after any change to `app/api/`, `lib/`, or `db/`. Do not consider work complete until it passes.
 - **Always run `npm run test:e2e`** after any change to `app/` pages, `components/`, or `hooks/`. Do not consider work complete until it passes.
 - **Mobile matters** — iOS Safari/Chrome and Android Chrome equally. Use `text-base sm:text-sm` on inputs to prevent auto-zoom, test touch interactions, respect mobile viewports.
@@ -64,6 +64,8 @@ One BDD toolchain (playwright-bdd), two layers, all features in `features/`:
 - **e2e** — `features/e2e/*.feature` + `tests/steps/e2e/` — real browser; `@touch-only` scenarios run in the mobile-chrome (Pixel 5) project only.
 
 **Acceptance criteria** are `@ac`-tagged scenarios in `features/e2e/` — the scenario name *is* the AC. `grep -A1 "@ac" features/e2e/*.feature` to list them. Feature files are the spec: fix code, never bend a feature file to make a test pass.
+
+**Only the main flow of a feature gets `@ac`** — at most one scenario per feature file, the one that describes the feature working as intended end to end. A file with no single end-to-end flow carries none rather than a padded one: `mobile.feature` is a backdrop z-index case, a touch drag, an Enter-key shortcut and a hover-free menu, which are mobile-specific behaviours, not a flow. Everything else (edge cases, negative cases, regressions, resilience, layout details) stays untagged unless the user explicitly asks for that scenario to be an AC; then tag it too. New scenarios default to untagged. The tag marks nothing else — every scenario runs either way — so an `@ac` list that grew to cover most of the suite says nothing about what the feature *is*, which is the whole point of the tag.
 
 **Round-trip budgets** live in `features/api/round-trips.feature`: each hot endpoint asserts a maximum number of database round trips, seeded with 20 rows so an N+1 fails rather than merely being slower.
 
