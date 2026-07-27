@@ -161,7 +161,7 @@ export default function TaskListDetailPage() {
       return;
     }
 
-    if (parentOf) return; // subtasks reorder within their parent, not here
+    if (parentOf) return; // subtasks are not sortable; they promote by swipe
     if (!over || active.id === over.id) return;
     const oldIndex = todoTasks.findIndex((t) => t.id === active.id);
     const newIndex = todoTasks.findIndex((t) => t.id === over.id);
@@ -223,7 +223,7 @@ export default function TaskListDetailPage() {
             onDragEnd={(e) => { setActiveDragId(null); handleDragEnd(e); }}
           >
             <SortableContext
-              items={todoTasks.flatMap((t) => [t.id, ...(t.subtasks ?? []).map((sub) => sub.id)])}
+              items={todoTasks.map((t) => t.id)}
               strategy={verticalListSortingStrategy}
             >
               <div>
@@ -246,13 +246,14 @@ export default function TaskListDetailPage() {
                       />
                       {!collapsed && !draggingParent &&
                         todoSubs.map((sub) => (
-                          <SortableTaskRow
+                          <TaskRow
                             key={sub.id}
                             id={sub.id}
                             title={sub.title}
                             description={sub.description}
                             isSubtask
                             canWrite={canWrite}
+                            onPromote={() => moveTask.mutate({ taskId: sub.id, parentId: null })}
                             onToggleDone={() => updateTask.mutate({ taskId: sub.id, data: { status: 'DONE' } })}
                             onSave={(v) => updateTask.mutate({ taskId: sub.id, data: v })}
                             actions={rowActions(sub, true)}

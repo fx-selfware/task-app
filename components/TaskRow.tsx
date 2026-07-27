@@ -20,6 +20,10 @@ export interface TaskRowProps {
    *  move from "reveal the actions" to "change the depth" — without it the two
    *  gestures fight over the same motion. */
   dragging?: boolean;
+  /** Subtasks only. A left swipe carried well past the action-reveal distance
+   *  returns the subtask to the top level — the gesture counterpart of
+   *  dragging a top-level task right to nest it. */
+  onPromote?: () => void;
   /** Rendered inside the row's action bar while editing. */
   actions?: { label: string; onClick: () => void; danger?: boolean }[];
 }
@@ -44,6 +48,7 @@ export function TaskRow({
   onToggleDone,
   onSave,
   dragging = false,
+  onPromote,
   actions = [],
 }: TaskRowProps) {
   const [editing, setEditing] = useState(false);
@@ -56,6 +61,9 @@ export function TaskRow({
   const drag = useRef<{ id: number; x0: number; y0: number; axis: 'none' | 'x' | 'y' } | null>(null);
   const REVEAL = 88;
   const COMPLETE = 96;
+  // Two stops on the same axis: a short left swipe reveals the actions, a long
+  // one outdents. Mail treats a long swipe the same way.
+  const PROMOTE = 150;
   const EDGE_GUARD = 44; // iOS reserves the left edge for its back-swipe
   const [draftTitle, setDraftTitle] = useState(title);
   const [draftDesc, setDraftDesc] = useState(description ?? '');
@@ -71,6 +79,12 @@ export function TaskRow({
   const endSwipe = useCallback(
     (finalDx: number) => {
       drag.current = null;
+      if (finalDx <= -PROMOTE && onPromote) {
+        setDx(0);
+        setRevealed(false);
+        onPromote();
+        return;
+      }
       if (finalDx >= COMPLETE && onToggleDone && !done) {
         setDx(0);
         setRevealed(false);
@@ -81,7 +95,7 @@ export function TaskRow({
       setRevealed(open);
       setDx(open ? -REVEAL : 0);
     },
-    [done, onToggleDone],
+    [done, onToggleDone, onPromote],
   );
 
   const commit = () => {
@@ -149,7 +163,7 @@ export function TaskRow({
           if (drag.current) { drag.current = null; setDx(revealed ? -REVEAL : 0); }
         }}
         style={{
-          transform: `translateX(${Math.max(Math.min(dx, 160), -REVEAL - 20)}px)`,
+          transform: `translateX(${Math.max(Math.min(dx, 160), onPromote ? -200 : -REVEAL - 20)}px)`,
           transition: drag.current ? 'none' : 'transform .22s cubic-bezier(.3,1,.4,1)',
           touchAction: 'pan-y',
         }}

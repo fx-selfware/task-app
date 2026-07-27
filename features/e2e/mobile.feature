@@ -45,3 +45,12 @@ Scenario: Row actions are reachable on a touch device without hovering
     When I swipe "Alpha" left by 20 pixels
     Then the row actions for "Alpha" are not revealed
     And "Alpha" is visible in the task list
+
+  @touch-only
+  Scenario: Swiping a subtask far left returns it to the top level
+    Given I have a task list named "Outdent"
+    When I open the task list "Outdent"
+    And I add a task named "Holder"
+    And I add a subtask named "Kid" to "Holder"
+    And I swipe "Kid" left by 190 pixels
+    Then "Kid" is a top-level task after "Holder"
