@@ -6,7 +6,7 @@ Feature: Authentication API
     And the response body has user.email "alice@example.com"
     And the response body has user.name "Alice"
     And the response body has no user.passwordHash
-    And the response sets an HttpOnly SameSite=Strict cookie named "token"
+    And the response sets an HttpOnly SameSite=Lax cookie named "token"
 
   Scenario: Register with a short password returns 400
     When I POST "/api/auth/register" with body '{"email":"shortpw@example.com","password":"short","name":"Short"}'
@@ -48,6 +48,11 @@ Feature: Authentication API
     When I POST "/api/auth/logout" with my cookie
     Then the status is 200
 
-  Scenario: Token cookie has HttpOnly and SameSite=Strict
+# Lax, not Strict: Chrome treats launching an installed PWA from the home screen
+# as a navigation from an external app (the launcher) and withholds Strict
+# cookies on it, so every cold launch bounced a logged-in user to /login.
+# Lax still keeps the cookie off cross-site POST/PATCH/DELETE, which is every
+# mutation in the API.
+  Scenario: Token cookie has HttpOnly and SameSite=Lax
     When I POST "/api/auth/register" with body '{"email":"flags@example.com","password":"password123","name":"Flags"}'
-    Then the response sets an HttpOnly SameSite=Strict cookie named "token"
+    Then the response sets an HttpOnly SameSite=Lax cookie named "token"

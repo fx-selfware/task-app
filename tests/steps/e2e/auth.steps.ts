@@ -159,7 +159,7 @@ Given('my session token has expired', async ({ page }) => {
       value: jwt.sign({ userId, email, role }, secret, { expiresIn: '-1h' }),
       url: page.url(),
       httpOnly: true,
-      sameSite: 'Strict',
+      sameSite: 'Lax',
       // The cookie itself outlives the token inside it, so the request still
       // carries it and the server is the one that rejects the session.
       expires: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
