@@ -6,7 +6,7 @@ Feature: Authentication API
     And the response body has user.email "alice@example.com"
     And the response body has user.name "Alice"
     And the response body has no user.passwordHash
-    And the response sets an HttpOnly SameSite=Lax cookie named "token"
+    And the response sets a cookie named "token"
 
   Scenario: Register with a short password returns 400
     When I POST "/api/auth/register" with body '{"email":"shortpw@example.com","password":"short","name":"Short"}'

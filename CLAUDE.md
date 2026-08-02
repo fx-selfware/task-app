@@ -15,7 +15,7 @@
 npm run dev             # dev server, http://localhost:3000 (needs .env — see .env.example)
 npm run build           # production build (also the type-check)
 npm test                # full BDD suite: api + chromium + mobile-chrome (boots its own server on :8099)
-npm run test:api        # 92 API scenarios only (fast, no browser)
+npm run test:api        # 96 API scenarios only (fast, no browser)
 npm run test:e2e        # 43 browser scenarios only
 npm run test:perf       # latency benchmark (builds, own server on :8098) — not part of `npm test`
 npm run perf:compare before after   # diff two benchmark reports
