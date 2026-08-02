@@ -57,13 +57,13 @@ Then('the response body has error {string}', async ({ world }, message: string) 
   expect(world.response.body?.error).toBe(message);
 });
 
-Then('the response sets an HttpOnly SameSite=Strict cookie named {string}', async ({ world }, cookieName: string) => {
+Then('the response sets an HttpOnly SameSite=Lax cookie named {string}', async ({ world }, cookieName: string) => {
   const cookieStr = world.response.setCookies.join('; ');
   expect(cookieStr).toContain(`${cookieName}=`);
-  // Cookie attributes are case-insensitive (RFC 6265); Fastify serialized
-  // "SameSite=Strict", Next serializes "SameSite=strict".
+  // Cookie attributes are case-insensitive (RFC 6265); Next serializes
+  // "SameSite=lax", so match case-insensitively.
   expect(cookieStr.toLowerCase()).toContain('httponly');
-  expect(cookieStr.toLowerCase()).toContain('samesite=strict');
+  expect(cookieStr.toLowerCase()).toContain('samesite=lax');
 });
 
 Then('the response sets a cookie named {string}', async ({ world }, cookieName: string) => {

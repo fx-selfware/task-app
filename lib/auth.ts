@@ -18,7 +18,12 @@ export function signToken(userId: string, email: string, role: string): string {
 export function authCookieOptions() {
   return {
     httpOnly: true,
-    sameSite: 'strict' as const,
+    // Lax, not Strict: Chrome treats a home-screen PWA launch as a navigation
+    // from an external app and withholds Strict cookies on it, so every cold
+    // launch of the installed app bounced through middleware.ts to /login.
+    // Lax still keeps the cookie off cross-site non-GET requests, which is
+    // every mutation in this API.
+    sameSite: 'lax' as const,
     secure: getConfig().COOKIE_SECURE,
     path: '/',
     maxAge: COOKIE_MAX_AGE,
